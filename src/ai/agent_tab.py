@@ -23,6 +23,11 @@ from .agent_service import AgentService, AgentResponse
 from .preview_dialog import YAMLPreviewDialog
 from .chat_widgets import MessageBubble, ToolCallBadge, TypingIndicator
 from .yaml_summary import summarize_blueprint
+from .model_selector import ModelSelectorWidget
+from .models.factory import ModelFactory
+from .models.config import get_model_config
+from .privacy import DataAnonymizer
+from app.core.config import PRIVACY_ENABLED
 import logging
 
 logger = logging.getLogger(__name__)
@@ -66,10 +71,10 @@ class AIAgentTab(QWidget):
     def __init__(self, monitor_tab=None, parent=None):
         super().__init__(parent)
         self.monitor_tab = monitor_tab
-        self.agent_service = AgentService(monitor_tab=monitor_tab)
+        self._session_id = uuid.uuid4().hex
+        self._current_model_id = "pockitect-ai"  # Default model
         self._thread: Optional[QThread] = None
         self._worker: Optional[_AgentWorker] = None
-        self._session_id = uuid.uuid4().hex
         self._last_prompt: str = ""
         self._last_response: Optional[AgentResponse] = None
         self._last_blueprint = None
@@ -79,76 +84,147 @@ class AIAgentTab(QWidget):
         self._tool_badges: List[ToolCallBadge] = []
         self._history_log: List[str] = []
         self._history_path = Path("data/cache/ai_history.txt")
+        self._anonymizer: Optional[DataAnonymizer] = None
         self._setup_ui()
-        self.agent_service.tool_started.connect(self._on_tool_started)
-        self.agent_service.tool_finished.connect(self._on_tool_finished)
-        self.agent_service.stream_chunk.connect(self._on_stream_chunk)
+        self._update_agent_service()
         self._load_history()
 
     def _setup_ui(self):
+        """Setup ChatGPT-style UI layout."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        header = QLabel("AI Assistant (Ollama)")
-        header.setStyleSheet("font-size: 18px; font-weight: bold;")
-        layout.addWidget(header)
-
-        self.status_label = QLabel("Ready")
-        self.status_label.setStyleSheet("color: #888;")
-        layout.addWidget(self.status_label)
-
-        self.input_edit = _InputEdit(self._on_send_clicked, self)
-        self.input_edit.setPlaceholderText(
-            "Ask me to create infrastructure, deploy projects, start/stop instances, etc.\n"
-            "Examples:\n"
-            "- Create a t3.micro Ubuntu web server in us-east-1\n"
-            "- Deploy the blog-backend project\n"
-            "- Stop my web-server project\n"
-            "- List all my projects"
-        )
-        self.input_edit.setMinimumHeight(90)
-        layout.addWidget(self.input_edit)
-
-        button_row = QHBoxLayout()
-        self.generate_btn = QPushButton("Send")
-        self.generate_btn.clicked.connect(self._on_send_clicked)
-        button_row.addWidget(self.generate_btn)
-
+        # Top bar: Model selector
+        top_bar = QWidget()
+        top_bar.setStyleSheet("""
+            QWidget {
+                background-color: #1a1a2e;
+                border-bottom: 1px solid #0f3460;
+            }
+        """)
+        top_bar_layout = QHBoxLayout(top_bar)
+        top_bar_layout.setContentsMargins(16, 12, 16, 12)
+        top_bar_layout.setSpacing(12)
+        
+        self.model_selector = ModelSelectorWidget()
+        self.model_selector.model_changed.connect(self._on_model_changed)
+        top_bar_layout.addWidget(self.model_selector)
+        top_bar_layout.addStretch()
+        
         self.new_session_btn = QPushButton("New Session")
         self.new_session_btn.clicked.connect(self._start_new_session)
-        button_row.addWidget(self.new_session_btn)
+        top_bar_layout.addWidget(self.new_session_btn)
+        
+        layout.addWidget(top_bar)
 
+        # Chat area: Scrollable message list
+        self.chat_scroll = QScrollArea()
+        self.chat_scroll.setWidgetResizable(True)
+        self.chat_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.chat_scroll.setStyleSheet("""
+            QScrollArea {
+                background-color: #1a1a2e;
+                border: none;
+            }
+        """)
+
+        self.chat_container = QWidget()
+        self.chat_container.setStyleSheet("background-color: #1a1a2e;")
+        self.chat_layout = QVBoxLayout(self.chat_container)
+        self.chat_layout.setContentsMargins(20, 20, 20, 20)
+        self.chat_layout.setSpacing(16)
+
+        self._typing_indicator = TypingIndicator()
+        self._typing_indicator.hide()
+
+        self.chat_layout.addStretch(1)
+        self.chat_scroll.setWidget(self.chat_container)
+        layout.addWidget(self.chat_scroll, 1)  # Stretch factor 1
+
+        # Bottom: Input area
+        input_container = QWidget()
+        input_container.setStyleSheet("""
+            QWidget {
+                background-color: #1a1a2e;
+                border-top: 1px solid #0f3460;
+            }
+        """)
+        input_layout = QVBoxLayout(input_container)
+        input_layout.setContentsMargins(16, 12, 16, 16)
+        input_layout.setSpacing(8)
+
+        # Action buttons row (hidden by default, shown when needed)
+        self.action_buttons = QHBoxLayout()
+        self.action_buttons.setSpacing(8)
+        
         self.preview_btn = QPushButton("Preview / Save")
         self.preview_btn.setEnabled(False)
         self.preview_btn.clicked.connect(self._show_preview_dialog)
-        button_row.addWidget(self.preview_btn)
+        self.action_buttons.addWidget(self.preview_btn)
 
         self.confirm_btn = QPushButton("Confirm & Execute")
         self.confirm_btn.setEnabled(False)
         self.confirm_btn.setStyleSheet("background-color: #2ecc71; color: white; font-weight: bold;")
         self.confirm_btn.clicked.connect(self._on_confirm_execute)
-        button_row.addWidget(self.confirm_btn)
+        self.action_buttons.addWidget(self.confirm_btn)
+        
+        self.action_buttons.addStretch()
+        self.action_buttons_widget = QWidget()
+        self.action_buttons_widget.setLayout(self.action_buttons)
+        self.action_buttons_widget.hide()
+        input_layout.addWidget(self.action_buttons_widget)
 
-        button_row.addStretch()
-        layout.addLayout(button_row)
-
-        self.chat_scroll = QScrollArea()
-        self.chat_scroll.setWidgetResizable(True)
-        self.chat_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.chat_scroll.setMinimumHeight(320)
-
-        self.chat_container = QWidget()
-        self.chat_layout = QVBoxLayout(self.chat_container)
-        self.chat_layout.setContentsMargins(8, 8, 8, 8)
-        self.chat_layout.setSpacing(8)
-
-        self._typing_indicator = TypingIndicator()
-        self._typing_indicator.hide()
-
-        self.chat_layout.addWidget(self._typing_indicator)
-        self.chat_layout.addStretch(1)
-        self.chat_scroll.setWidget(self.chat_container)
-        layout.addWidget(self.chat_scroll)
+        # Input field and send button
+        input_row = QHBoxLayout()
+        input_row.setSpacing(8)
+        
+        self.input_edit = _InputEdit(self._on_send_clicked, self)
+        self.input_edit.setPlaceholderText(
+            "Ask me to create infrastructure, deploy projects, start/stop instances, etc."
+        )
+        self.input_edit.setMinimumHeight(60)
+        self.input_edit.setMaximumHeight(120)
+        self.input_edit.setStyleSheet("""
+            QTextEdit {
+                background-color: #16213e;
+                border: 1px solid #0f3460;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 14px;
+                color: #eaeaea;
+            }
+            QTextEdit:focus {
+                border-color: #e94560;
+            }
+        """)
+        input_row.addWidget(self.input_edit)
+        
+        self.send_btn = QPushButton("Send")
+        self.send_btn.setMinimumWidth(80)
+        self.send_btn.setMinimumHeight(40)
+        self.send_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e94560;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #ff6b6b;
+            }
+            QPushButton:disabled {
+                background-color: #2a2a4a;
+                color: #666;
+            }
+        """)
+        self.send_btn.clicked.connect(self._on_send_clicked)
+        input_row.addWidget(self.send_btn)
+        
+        input_layout.addLayout(input_row)
+        layout.addWidget(input_container)
 
     def _on_send_clicked(self):
         prompt = self.input_edit.toPlainText().strip()
@@ -172,6 +248,9 @@ class AIAgentTab(QWidget):
         self._streaming_bubble = self._append_message("assistant", "")
         self._show_typing_indicator()
 
+        # Clear input
+        self.input_edit.clear()
+        
         self._thread = QThread(self)
         self._worker = _AgentWorker(prompt, self.agent_service, self._session_id)
         self._worker.moveToThread(self._thread)
@@ -186,14 +265,46 @@ class AIAgentTab(QWidget):
         self._thread.start()
 
     def _start_new_session(self):
+        """Start a new chat session."""
         self.agent_service.session_manager.clear_session(self._session_id)
         self._session_id = uuid.uuid4().hex
         self._clear_messages()
         self._history_log = []
         self._save_history()
-        self.status_label.setText("New session started.")
+        if self._anonymizer:
+            self._anonymizer.clear_mapping()
+            self._anonymizer = None
+        self._update_agent_service()
+        
+    def _on_model_changed(self, model_id: str):
+        """Handle model selection change."""
+        self._current_model_id = model_id
+        self._update_agent_service()
+        
+    def _update_agent_service(self):
+        """Update agent service with current model and privacy settings."""
+        try:
+            # Create new agent service with selected model
+            self.agent_service = AgentService(
+                monitor_tab=self.monitor_tab,
+                model_id=self._current_model_id,
+                session_id=self._session_id
+            )
+            
+            # Connect signals
+            self.agent_service.tool_started.connect(self._on_tool_started)
+            self.agent_service.tool_finished.connect(self._on_tool_finished)
+            self.agent_service.stream_chunk.connect(self._on_stream_chunk)
+            
+            # Privacy anonymizer is now handled by AgentService
+            self._anonymizer = self.agent_service.anonymizer
+                
+        except Exception as e:
+            logger.exception(f"Failed to update agent service: {e}")
+            QMessageBox.warning(self, "Model Error", f"Failed to initialize model: {e}")
 
     def _on_response_received(self, response: AgentResponse):
+        """Handle response from agent service."""
         self._last_response = response
         self._set_loading_state(False)
         self._hide_typing_indicator()
@@ -214,12 +325,8 @@ class AIAgentTab(QWidget):
             self._streaming_bubble.set_text(summary)
             self._append_history_line(f"Assistant: {summary}")
             self.preview_btn.setEnabled(True)
+            self.action_buttons_widget.show()
             self.confirm_btn.setEnabled(False)
-
-            if errors:
-                self.status_label.setText(f"Generated with {len(errors)} validation issue(s).")
-            else:
-                self.status_label.setText("YAML generated successfully.")
         
         elif response.requires_confirmation:
             # Command requiring confirmation
@@ -227,7 +334,7 @@ class AIAgentTab(QWidget):
             self._append_history_line(f"Assistant: {response.message}")
             self.preview_btn.setEnabled(False)
             self.confirm_btn.setEnabled(True)
-            self.status_label.setText("Action ready. Confirm to execute.")
+            self.action_buttons_widget.show()
         
         else:
             # Query or other non-action response
@@ -236,17 +343,18 @@ class AIAgentTab(QWidget):
             self._append_history_line(f"Assistant: {final_text}")
             self.preview_btn.setEnabled(False)
             self.confirm_btn.setEnabled(False)
-            self.status_label.setText("Response received.")
+            self.action_buttons_widget.hide()
         
         self._save_history()
 
     def _on_request_failed(self, message: str):
+        """Handle request failure."""
         self._set_loading_state(False)
         self._hide_typing_indicator()
-        self.status_label.setText("Request failed.")
-        self._append_message("assistant", "Request failed. See error dialog for details.")
+        error_msg = f"❌ Request failed: {message}"
+        self._append_message("assistant", error_msg)
         self._append_history_line(f"User: {self._last_prompt}")
-        self._append_history_line("Assistant: Request failed. See error dialog for details.")
+        self._append_history_line(f"Assistant: {error_msg}")
         self._save_history()
         QMessageBox.critical(self, "Error", message)
 
@@ -402,18 +510,27 @@ class AIAgentTab(QWidget):
             self._thread = None
 
     def _append_message(self, role: str, text: str) -> MessageBubble:
+        """Append a message bubble to the chat."""
         bubble = MessageBubble(text, role=role)
         wrapper = QWidget()
+        wrapper.setStyleSheet("background: transparent;")
         layout = QHBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        
         if role == "user":
+            # User messages: right-aligned
+            layout.addStretch(2)
+            layout.addWidget(bubble, 0, Qt.AlignmentFlag.AlignRight)
             layout.addStretch(1)
-            layout.addWidget(bubble)
         else:
-            layout.addWidget(bubble)
+            # Assistant messages: left-aligned
             layout.addStretch(1)
+            layout.addWidget(bubble, 0, Qt.AlignmentFlag.AlignLeft)
+            layout.addStretch(2)
 
-        insert_index = max(0, self.chat_layout.count() - 2)
+        # Insert before the stretch at the end
+        insert_index = max(0, self.chat_layout.count() - 1)
         self.chat_layout.insertWidget(insert_index, wrapper)
         self._scroll_to_bottom()
         return bubble
@@ -444,28 +561,29 @@ class AIAgentTab(QWidget):
         self._typing_indicator.hide()
 
     def _on_tool_started(self, tool_name: str) -> None:
+        """Handle tool call started."""
         badge = ToolCallBadge(tool_name, status="running")
         wrapper = QWidget()
+        wrapper.setStyleSheet("background: transparent;")
         layout = QHBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(badge)
+        layout.addStretch(1)
+        layout.addWidget(badge, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addStretch(1)
 
-        insert_index = max(0, self.chat_layout.count() - 2)
+        insert_index = max(0, self.chat_layout.count() - 1)
         self.chat_layout.insertWidget(insert_index, wrapper)
         self._tool_badges.append(badge)
         self._scroll_to_bottom()
 
     def _on_tool_finished(self, tool_name: str, result: str) -> None:
+        """Handle tool call finished."""
         for badge in reversed(self._tool_badges):
             label = badge.findChild(QLabel)
             if label and tool_name in label.text():
                 badge.update_status(tool_name, status="done")
                 break
-        if result:
-            self._append_message("assistant", result)
-            self._append_history_line(f"Assistant: {result}")
-            self._save_history()
+        # Don't show tool results as separate messages - they're part of the context
 
     def _on_stream_chunk(self, text: str) -> None:
         if not text:
@@ -492,12 +610,14 @@ class AIAgentTab(QWidget):
             self._start_processing(self._last_prompt)
 
     def _set_loading_state(self, loading: bool):
-        self.generate_btn.setEnabled(not loading)
+        """Update UI state during loading."""
+        self.send_btn.setEnabled(not loading)
         self.input_edit.setEnabled(not loading)
-        self.preview_btn.setEnabled(not loading and bool(self._last_blueprint))
+        if not loading:
+            self.preview_btn.setEnabled(bool(self._last_blueprint))
+        else:
+            self.preview_btn.setEnabled(False)
         self.confirm_btn.setEnabled(False)  # Will be enabled by response handler if needed
-        if loading:
-            self.status_label.setText("Processing...")
 
     def _load_history(self):
         if not self._history_path.exists():

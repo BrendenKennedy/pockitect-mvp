@@ -8,7 +8,9 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal
 
-from .ollama_client import OllamaClient
+from .models.factory import ModelFactory
+from .models.base import BaseLLMClient
+from .models.config import get_model_config, get_default_model
 from .context_provider import ContextProvider
 from .yaml_generator import YAMLGenerator
 from .command_executor import CommandExecutor
@@ -16,6 +18,9 @@ from .project_matcher import ProjectMatcher
 from .session_manager import SessionManager
 from .ambiguity_detector import AmbiguityDetector
 from .tools import ToolExecutor, parse_tool_request
+from .privacy import DataAnonymizer
+from .prompts.model_prompts import get_system_prompt, get_yaml_prompt
+from app.core.config import PRIVACY_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -50,16 +55,25 @@ class AgentService(QObject):
     tool_finished = Signal(str, str)
     stream_chunk = Signal(str)
     
-    def __init__(self, monitor_tab=None):
+    def __init__(self, monitor_tab=None, model_id: Optional[str] = None, session_id: Optional[str] = None):
         super().__init__()
-        self.ollama_client = OllamaClient()
+        self.model_id = model_id or get_default_model()
+        self.session_id = session_id or ""
+        self.llm_client = ModelFactory.create_client(self.model_id)
         self.context_provider = ContextProvider(monitor_tab)
-        self.yaml_generator = YAMLGenerator(self.ollama_client)
+        self.yaml_generator = YAMLGenerator(self.llm_client, model_id=self.model_id)
         self.command_executor = CommandExecutor()
         self.project_matcher = ProjectMatcher()
         self.session_manager = SessionManager()
         self.ambiguity_detector = AmbiguityDetector()
         self.tool_executor = ToolExecutor(self.context_provider, command_executor=self.command_executor)
+        
+        # Setup privacy anonymizer if needed
+        config = get_model_config(self.model_id)
+        if config and config.privacy_required and PRIVACY_ENABLED:
+            self.anonymizer = DataAnonymizer(self.session_id) if self.session_id else None
+        else:
+            self.anonymizer = None
     
     def process_request(self, user_input: str, session_id: Optional[str] = None) -> AgentResponse:
         """
@@ -84,11 +98,17 @@ class AgentService(QObject):
         if intent.type == "create":
             # Generate YAML blueprint
             try:
-                if not self.ollama_client.health_check():
+                if not self.llm_client.health_check():
                     return AgentResponse(
                         intent=intent,
-                        message="Ollama is not reachable. Please ensure it is running on localhost:11434."
+                        message=f"{self.model_id} is not reachable. Please check your model configuration."
                     )
+                
+                # Anonymize context if needed
+                anonymized_context = context
+                if self.anonymizer:
+                    anonymized_context = self.anonymizer.anonymize_context(context)
+                
                 ambiguity = self.ambiguity_detector.detect_ambiguity(user_input)
                 resolved = {}
                 if ambiguity.get("is_ambiguous"):
@@ -96,7 +116,7 @@ class AgentService(QObject):
                 prompt_input = self._append_resolved_context(user_input, resolved)
                 blueprint = self.yaml_generator.generate_blueprint(
                     prompt_input,
-                    context,
+                    anonymized_context,
                     history=history,
                     stream_callback=self.stream_chunk.emit,
                 )
@@ -117,14 +137,20 @@ class AgentService(QObject):
         
         elif intent.type == "refine":
             try:
-                if not self.ollama_client.health_check():
+                if not self.llm_client.health_check():
                     return AgentResponse(
                         intent=intent,
-                        message="Ollama is not reachable. Please ensure it is running on localhost:11434."
+                        message=f"{self.model_id} is not reachable. Please check your model configuration."
                     )
+                
+                # Anonymize context if needed
+                anonymized_context = context
+                if self.anonymizer:
+                    anonymized_context = self.anonymizer.anonymize_context(context)
+                
                 blueprint = self.yaml_generator.generate_blueprint(
                     user_input,
-                    context,
+                    anonymized_context,
                     history=history,
                     stream_callback=self.stream_chunk.emit,
                 )
@@ -274,7 +300,24 @@ class AgentService(QObject):
                 )
         
         elif intent.type == "query":
-            # Handle queries (list projects, show status, etc.)
+            # Handle greetings and small talk
+            input_lower = user_input.lower().strip()
+            greetings = ["hello", "hi", "hey", "greetings", "howdy", "good morning", 
+                         "good afternoon", "good evening", "what's up", "sup", "yo"]
+            
+            if input_lower in greetings:
+                return AgentResponse(
+                    intent=intent,
+                    message="Hello! I'm your AWS infrastructure assistant. I can help you:\n"
+                           "- Create new infrastructure projects\n"
+                           "- Deploy existing projects\n"
+                           "- Start/stop instances\n"
+                           "- Check your budget and costs\n"
+                           "- List your projects\n\n"
+                           "What would you like to do?"
+                )
+            
+            # Handle other queries (list projects, show status, etc.)
             projects = self.context_provider.get_projects_summary()
             return AgentResponse(
                 intent=intent,
@@ -302,6 +345,12 @@ class AgentService(QObject):
         input_lower = user_input.lower().strip()
         if len(input_lower) < 3:
             return AgentIntent(type="unknown", confidence=0.2)
+        
+        # Greetings and small talk - handle as query, don't call model
+        greetings = ["hello", "hi", "hey", "greetings", "howdy", "good morning", 
+                     "good afternoon", "good evening", "what's up", "sup", "yo"]
+        if input_lower.strip() in greetings:
+            return AgentIntent(type="query", confidence=0.95)
         
         # High confidence keyword-based detection
         if any(word in input_lower for word in ["create", "make", "new", "generate", "build"]):

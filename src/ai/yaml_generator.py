@@ -8,13 +8,16 @@ from typing import Any, Dict, Callable, Optional
 import yaml
 
 from storage import create_empty_blueprint
-from .ollama_client import OllamaClient
+from .models.base import BaseLLMClient
 from .prompts import YAML_SYSTEM_PROMPT
+from .prompts.model_prompts import get_yaml_prompt
 
 
 class YAMLGenerator:
-    def __init__(self, ollama_client: OllamaClient | None = None) -> None:
-        self.ollama_client = ollama_client or OllamaClient()
+    def __init__(self, llm_client: BaseLLMClient | None = None, model_id: str = "pockitect-ai") -> None:
+        from .models.factory import ModelFactory
+        self.llm_client = llm_client or ModelFactory.create_client(model_id)
+        self.model_id = model_id
 
     def generate_blueprint(
         self,
@@ -23,16 +26,19 @@ class YAMLGenerator:
         history: str = "",
         stream_callback: Optional[Callable[[str], None]] = None,
     ) -> Dict[str, Any]:
-        system_prompt = YAML_SYSTEM_PROMPT
+        # Get model-specific system prompt
+        system_prompt = get_yaml_prompt(self.model_id, YAML_SYSTEM_PROMPT)
         prompt = self._build_prompt(user_input, context, history=history)
+        
         if stream_callback:
             chunks = []
-            for chunk in self.ollama_client.generate_stream(prompt, system_prompt=system_prompt):
+            for chunk in self.llm_client.generate_stream(prompt, system_prompt=system_prompt):
                 chunks.append(chunk)
                 stream_callback(chunk)
             response = "".join(chunks)
         else:
-            response = self.ollama_client.generate(prompt, system_prompt=system_prompt)
+            response = self.llm_client.generate(prompt, system_prompt=system_prompt)
+        
         blueprint = self._parse_yaml_from_response(response)
         merged = self._apply_defaults(blueprint)
         self._validate_blueprint(merged)
@@ -67,8 +73,10 @@ class YAMLGenerator:
                 f"{schema_definition}\n\n",
                 f"{examples}\n\n",
                 f'User Request: "{user_input}"\n\n',
+                "If this is an actual infrastructure request (create, build, deploy, make, generate), generate valid YAML matching the schema above.\n"
+                "If this is not an infrastructure request (e.g., greeting, question, command, or unrelated request), do NOT generate YAML.\n"
                 "If this is a refinement of a previous request, modify the last blueprint accordingly.\n",
-                "Generate ONLY valid YAML matching the schema above. No explanations, just YAML.",
+                "Generate ONLY valid YAML matching the schema above when appropriate. No explanations, just YAML.",
             ]
         )
 

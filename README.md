@@ -13,21 +13,70 @@ A desktop-first, local-first AWS infrastructure wizard built with PySide6 and Re
 
 ## Prerequisites
 
-1. **Python 3.10+**
-2. **Redis Server** (Must be running locally)
+- **Python 3.10+**
+- **Redis Server** (must be running locally)
+- **Ollama** (optional, for AI Agent features)
+- **Qt5 libraries** (Linux only, for PySide6)
+
+## Installation
+
+### Automated Installation (Recommended)
+
+**On Linux/macOS:**
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+**On Windows (PowerShell):**
+```powershell
+.\install.ps1
+```
+
+The installation script will:
+- Check and install Python 3.10+ if needed
+- Install Redis server and start it
+- Install Qt dependencies (Linux only)
+- Optionally install Ollama for AI features
+- Create a Python virtual environment
+- Install all Python dependencies
+
+### Manual Installation
+
+If you prefer to install manually:
+
+1. **Install Python 3.10+**
+   - Linux: `sudo apt install python3.10 python3-pip` (Ubuntu/Debian)
+   - macOS: `brew install python@3.10`
+   - Windows: Download from [python.org](https://www.python.org/downloads/)
+
+2. **Install Redis**
+   - Linux: `sudo apt install redis-server && sudo systemctl start redis-server`
+   - macOS: `brew install redis && brew services start redis`
+   - Windows: Download from [Redis releases](https://github.com/microsoftarchive/redis/releases) or use Chocolatey: `choco install redis-64`
+
+3. **Install Qt dependencies (Linux only)**
    ```bash
-   sudo apt install redis-server
-   sudo service redis-server start
+   # Ubuntu/Debian
+   sudo apt install libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0
+   
+   # Fedora/RHEL
+   sudo dnf install qt5-qtbase-x11 libxkbcommon
+   
+   # Arch
+   sudo pacman -S qt5-base xcb-util libxkbcommon
    ```
 
-## Quick Start
+4. **Set up Python environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-### 1. Install Dependencies
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+5. **Install Ollama (optional, for AI features)**
+   - Visit [ollama.ai](https://ollama.ai) and follow installation instructions
+   - Pull a model: `ollama pull llama3.2`
 
 ### 2. Run with Debug Logging (Recommended for Development)
 We provide helper scripts that automatically start Redis and Ollama in the background, redirect their logs to the `data/logs/` directory, and then launch the app.
@@ -48,6 +97,20 @@ We provide helper scripts that automatically start Redis and Ollama in the backg
 - `data/logs/ollama.log`: Ollama server logs (if started by the script).
 
 **Note:** The scripts will check if Redis and Ollama are already running, and only start them if needed. Ensure Ollama is installed and a model is available (e.g., `ollama pull llama3.2`) for AI Agent features to work.
+
+### Verify Installation
+
+Before running, you can check that all requirements are met:
+
+**On Linux/macOS:**
+```bash
+./check_requirements.sh
+```
+
+**On Windows:**
+```powershell
+.\check_requirements.ps1
+```
 
 ### Manual Startup (Production-like)
 

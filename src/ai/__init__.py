@@ -1,7 +1,7 @@
 """AI agent package for natural language project generation and command execution."""
 
 from .context_provider import ContextProvider
-from .ollama_client import OllamaClient
+from .models import OllamaClient
 from .yaml_generator import YAMLGenerator
 from .validator import BlueprintValidator
 from .agent_service import AgentService, AgentResponse, AgentIntent

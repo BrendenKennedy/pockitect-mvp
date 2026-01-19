@@ -47,6 +47,10 @@ LOG_LEVEL = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INF
 # Threading
 WORKER_MAX = int(os.getenv("WORKER_MAX", "5"))
 
+# Privacy Configuration
+PRIVACY_ENABLED = os.getenv("PRIVACY_ENABLED", "true").lower() == "true"
+PRIVACY_MAPPING_TTL = int(os.getenv("PRIVACY_MAPPING_TTL", "86400"))  # 24 hours
+
 def setup_logging(name=None):
     """
     Configure logging for the application.

@@ -15,12 +15,21 @@ class ProjectStatusCalculator:
         if "compute" in blueprint:
             statuses.append(blueprint["compute"].get("status", "unknown"))
 
+        # Check if resources have actually been created (have IDs)
+        network = blueprint.get("network", {})
+        compute = blueprint.get("compute", {})
+        has_created_resources = bool(
+            network.get("vpc_id") or network.get("security_group_id") or
+            compute.get("instance_id")
+        )
+
         if statuses and all(status == "running" for status in statuses):
             return "running"
         if any(status == "failed" for status in statuses):
             return "failed"
+        # If status is "pending" but no resources have been created yet, treat as "draft"
         if any(status == "pending" for status in statuses):
-            return "pending"
+            return "draft" if not has_created_resources else "pending"
         if statuses and all(status == "skipped" for status in statuses):
             return "skipped"
         return "unknown"
