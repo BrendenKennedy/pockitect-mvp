@@ -1,0 +1,1 @@
+Build an e-commerce backend infrastructure: t3.medium EC2 instance running Node.js, PostgreSQL database with 50GB storage for product and order data, S3 bucket for product images and assets, all standard web ports (22, 80, 443) open. Deploy in EU (Frankfurt) for European customers.

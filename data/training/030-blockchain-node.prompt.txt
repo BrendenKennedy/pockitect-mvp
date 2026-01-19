@@ -1,0 +1,1 @@
+Deploy a blockchain node with t3.large instance, PostgreSQL database (120GB) for transaction history, S3 for chain data backups. Custom VPC (10.50.0.0/16), SSH and HTTPS. Deploy in Asia Pacific (Singapore).

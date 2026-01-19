@@ -1,0 +1,83 @@
+{
+  "project": {
+    "name": "simple-blog",
+    "description": "A simple blog backend with PostgreSQL database",
+    "region": "us-east-2",
+    "created_at": "2026-01-19T16:17:09.732299Z",
+    "owner": "developer",
+    "cost": null
+  },
+  "network": {
+    "vpc_id": null,
+    "subnet_id": null,
+    "security_group_id": null,
+    "vpc_env": "prod",
+    "rules": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "SSH"
+      },
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "HTTP"
+      },
+      {
+        "port": 443,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "HTTPS"
+      }
+    ],
+    "status": "pending",
+    "subnet_type": "public"
+  },
+  "compute": {
+    "instance_type": "t3.micro",
+    "image_id": "ubuntu-22.04",
+    "user_data": "",
+    "instance_id": null,
+    "status": "pending"
+  },
+  "data": {
+    "db": {
+      "engine": "postgres",
+      "instance_class": "db.t3.micro",
+      "allocated_storage_gb": 20,
+      "username": "admin",
+      "password": null,
+      "endpoint": null,
+      "status": "pending"
+    },
+    "s3_bucket": {
+      "name": null,
+      "arn": null,
+      "status": "skipped"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "name": "simple-blog-key",
+      "mode": "generate",
+      "key_pair_id": null,
+      "private_key_pem": null,
+      "status": "pending"
+    },
+    "certificate": {
+      "domain": null,
+      "mode": "skip",
+      "cert_arn": null,
+      "status": "skipped"
+    },
+    "iam_role": {
+      "role_name": "simple-blog-role",
+      "policy_document": {},
+      "arn": null,
+      "instance_profile_arn": null,
+      "status": "pending"
+    }
+  }
+}

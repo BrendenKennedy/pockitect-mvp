@@ -1,0 +1,19 @@
+# Pockitect MVP Dependencies
+# Python 3.10+ required
+
+# UI Framework
+PySide6>=6.6.0
+
+# AWS SDK
+boto3>=1.34.0
+botocore>=1.34.0
+
+# Backend & Async
+redis>=5.0.0
+
+# Utilities
+keyring>=24.0.0
+pyperclip>=1.8.0  # Clipboard support fallback
+PyYAML>=6.0
+watchdog>=3.0.0
+ollama>=0.1.0

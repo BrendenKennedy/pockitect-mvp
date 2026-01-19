@@ -1,0 +1,1 @@
+Following DevOps best practices, set up a high-availability API with redundancy considerations: medium instance for better performance, database with automated backups, S3 for static assets. Include proper security group rules. Estimate can handle 1000+ requests/minute. Deploy in US East (Ohio).

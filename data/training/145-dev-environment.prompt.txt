@@ -1,0 +1,1 @@
+Please Set up a development environment with t3.micro instance, no database, no S3. Just SSH access. Deploy in US East (Ohio).

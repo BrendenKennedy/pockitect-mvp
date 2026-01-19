@@ -1,0 +1,1 @@
+Please Create a CI/CD runner infrastructure: t3.medium instance with Docker support, S3 bucket for build artifacts and logs, PostgreSQL database (20GB) for pipeline metadata. SSH and HTTPS only. Deploy in Asia Pacific (Tokyo).

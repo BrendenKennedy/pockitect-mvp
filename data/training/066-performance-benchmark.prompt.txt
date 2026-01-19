@@ -1,0 +1,1 @@
+Following performance benchmarking best practices, create a setup for load testing: large instance for high throughput, database sized for concurrent connections, monitoring considerations. Estimate can handle 100k requests/minute. Include latency targets. Deploy in US West (Oregon).

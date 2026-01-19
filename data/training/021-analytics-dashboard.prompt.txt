@@ -1,0 +1,1 @@
+Build an analytics dashboard with t3.large instance, PostgreSQL database (80GB) for time-series data, S3 for report exports. Custom VPC (10.30.0.0/16), HTTPS only. Deploy in Asia Pacific (Singapore).

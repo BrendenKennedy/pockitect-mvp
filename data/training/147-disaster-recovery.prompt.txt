@@ -1,0 +1,1 @@
+Please Following disaster recovery best practices, create a setup with automated backups: database with daily snapshots, S3 for backup storage, multi-AZ considerations. Estimate backup storage costs. Deploy in US East (N. Virginia).

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "pockitect-full-stack-assets",
+    "type": "s3_bucket",
+    "region": "global",
+    "name": "pockitect-full-stack-assets",
+    "state": "active",
+    "details": {
+      "creation_date": "2026-01-19T03:37:18+00:00"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForAmazonElasticFileSystem",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForAmazonElasticFileSystem",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/elasticfilesystem.amazonaws.com/AWSServiceRoleForAmazonElasticFileSystem"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForEC2Spot",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForEC2Spot",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForElasticLoadBalancing",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForElasticLoadBalancing",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForResourceExplorer",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForResourceExplorer",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/resource-explorer-2.amazonaws.com/AWSServiceRoleForResourceExplorer"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForServiceQuotas",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForServiceQuotas",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/servicequotas.amazonaws.com/AWSServiceRoleForServiceQuotas"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForSupport",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForSupport",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/support.amazonaws.com/AWSServiceRoleForSupport"
+    },
+    "tags": {}
+  },
+  {
+    "id": "AWSServiceRoleForTrustedAdvisor",
+    "type": "iam_role",
+    "region": "global",
+    "name": "AWSServiceRoleForTrustedAdvisor",
+    "state": "active",
+    "details": {
+      "arn": "arn:aws:iam::109719059248:role/aws-service-role/trustedadvisor.amazonaws.com/AWSServiceRoleForTrustedAdvisor"
+    },
+    "tags": {}
+  }
+]

@@ -1,0 +1,1 @@
+Please Set up a data warehouse with t3.large instance, PostgreSQL database (150GB) for analytics, S3 for raw data ingestion. SSH restricted to office network (10.0.0.0/8). Deploy in EU (Frankfurt).

@@ -1,0 +1,44 @@
+{
+  "project": {
+    "name": "test-custom-ports",
+    "description": "Multiple custom application ports",
+    "region": "us-east-1",
+    "owner": "tester"
+  },
+  "network": {
+    "vpc_mode": "default",
+    "subnet_type": "public",
+    "rules": [
+      { "port": 22, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SSH" },
+      { "port": 3000, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "Frontend Dev" },
+      { "port": 5000, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "Backend API" },
+      { "port": 8000, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "Django" },
+      { "port": 8080, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "Tomcat" },
+      { "port": 9000, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SonarQube" },
+      { "port": 27017, "protocol": "tcp", "cidr": "10.0.0.0/8", "description": "MongoDB (private)" }
+    ],
+    "status": "pending"
+  },
+  "compute": {
+    "instance_type": "t3.large",
+    "image_id": "ubuntu-22.04",
+    "user_data": "",
+    "status": "pending"
+  },
+  "data": {
+    "db": { "status": "skipped" },
+    "s3_bucket": { "status": "skipped" }
+  },
+  "security": {
+    "key_pair": {
+      "mode": "generate",
+      "name": "test-custom-ports-key",
+      "status": "pending"
+    },
+    "iam_role": {
+      "enabled": true,
+      "role_name": "test-custom-ports-role",
+      "status": "pending"
+    }
+  }
+}

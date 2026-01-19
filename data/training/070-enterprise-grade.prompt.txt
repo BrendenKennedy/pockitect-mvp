@@ -1,0 +1,1 @@
+Following enterprise best practices, create a production-grade setup: high availability, disaster recovery, security hardening, compliance considerations, monitoring. Estimate enterprise-level costs. Include SLA considerations. Deploy in US East (N. Virginia).

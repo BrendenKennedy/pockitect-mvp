@@ -1,0 +1,1 @@
+Please Following CI/CD best practices, create a pipeline infrastructure: instance for build runners, S3 for artifacts, database for pipeline state. Estimate build costs per month. Include security considerations. Deploy in US East (Ohio).

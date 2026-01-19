@@ -1,0 +1,7 @@
+Create a Docker host for running containers:
+- Larger instance (t3.large) with more resources
+- Docker pre-installed
+- S3 bucket for container images/backups
+- All standard ports: SSH, HTTP, HTTPS
+- New VPC with custom CIDR 10.10.0.0/16
+- Deploy in Asia Pacific (Tokyo)

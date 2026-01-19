@@ -1,0 +1,1 @@
+Following database optimization best practices, set up a database-heavy application: appropriately sized database instance, connection pooling considerations, backup strategy. Estimate database costs separately. Include performance tuning. Deploy in US East (N. Virginia).

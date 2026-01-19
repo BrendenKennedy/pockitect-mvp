@@ -1,0 +1,1 @@
+I need a blog with a database but nothing too powerful.

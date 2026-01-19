@@ -1,0 +1,1 @@
+Following performance optimization best practices, create a high-performance setup: large instance for CPU-intensive workloads, database with read replicas consideration, optimized networking. Estimate can handle 50k requests/minute. Include performance metrics. Deploy in US West (Oregon).

@@ -1,0 +1,1 @@
+Create an IoT backend with t3.medium instance, PostgreSQL database (60GB) for device data, S3 for sensor logs. MQTT port 1883, HTTP/HTTPS. Deploy in US West (Oregon).

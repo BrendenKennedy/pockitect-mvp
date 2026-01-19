@@ -1,0 +1,63 @@
+[
+  {
+    "id": "i-07008d18f89f044bd",
+    "type": "ec2_instance",
+    "region": "us-east-1",
+    "name": "app_server",
+    "state": "running",
+    "details": {
+      "type": "t3.large",
+      "public_ip": null,
+      "vpc_id": "vpc-017a1ecaed61221db"
+    },
+    "tags": {
+      "pockitect:project": "full-stack-app",
+      "Name": "app_server"
+    }
+  },
+  {
+    "id": "vpc-017a1ecaed61221db",
+    "type": "vpc",
+    "region": "us-east-1",
+    "name": "pockitect-dev",
+    "state": "available",
+    "details": {
+      "cidr": "10.1.0.0/16"
+    },
+    "tags": {
+      "pockitect:managed_vpc": "dev",
+      "pockitect:managed": "true",
+      "Name": "pockitect-dev"
+    }
+  },
+  {
+    "id": "vpc-0b52496c3b725c61d",
+    "type": "vpc",
+    "region": "us-east-1",
+    "name": "pockitect-test",
+    "state": "available",
+    "details": {
+      "cidr": "10.2.0.0/16"
+    },
+    "tags": {
+      "pockitect:managed_vpc": "test",
+      "Name": "pockitect-test",
+      "pockitect:managed": "true"
+    }
+  },
+  {
+    "id": "vpc-0c7c13fd24419bfca",
+    "type": "vpc",
+    "region": "us-east-1",
+    "name": "pockitect-prod",
+    "state": "available",
+    "details": {
+      "cidr": "10.0.0.0/16"
+    },
+    "tags": {
+      "pockitect:managed_vpc": "prod",
+      "pockitect:managed": "true",
+      "Name": "pockitect-prod"
+    }
+  }
+]

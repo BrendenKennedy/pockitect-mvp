@@ -1,0 +1,1 @@
+Please Create a notification service with t3.small instance, MySQL database (25GB) for notification history, S3 for templates. HTTP/HTTPS. Deploy in US West (California).

@@ -1,0 +1,84 @@
+{
+  "project": {
+    "name": "ml-training-server",
+    "description": "Machine learning training server with database and S3 storage",
+    "region": "us-west-2",
+    "created_at": "2026-01-19T16:17:09.735587Z",
+    "owner": "ml-engineer",
+    "cost": null
+  },
+  "network": {
+    "vpc_id": null,
+    "subnet_id": null,
+    "security_group_id": null,
+    "vpc_env": "prod",
+    "rules": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "cidr": "10.0.0.0/8",
+        "description": "SSH (restricted)"
+      },
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "HTTP"
+      },
+      {
+        "port": 443,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "HTTPS"
+      }
+    ],
+    "status": "pending",
+    "subnet_type": "public"
+  },
+  "compute": {
+    "instance_type": "t3.large",
+    "image_id": null,
+    "user_data": "#!/bin/bash\napt update\napt install -y python3-pip python3-venv\npip3 install tensorflow torch scikit-learn pandas numpy",
+    "instance_id": null,
+    "status": "pending",
+    "image_name": "ubuntu-22.04"
+  },
+  "data": {
+    "db": {
+      "engine": "postgres",
+      "instance_class": "db.t3.medium",
+      "allocated_storage_gb": 100,
+      "username": "ml_admin",
+      "password": null,
+      "endpoint": null,
+      "status": "pending"
+    },
+    "s3_bucket": {
+      "name": "ml-training-datasets",
+      "arn": null,
+      "status": "pending"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "name": "ml-training-server-key",
+      "mode": "generate",
+      "key_pair_id": null,
+      "private_key_pem": null,
+      "status": "pending"
+    },
+    "certificate": {
+      "domain": null,
+      "mode": "skip",
+      "cert_arn": null,
+      "status": "skipped"
+    },
+    "iam_role": {
+      "role_name": "ml-training-server-role",
+      "policy_document": {},
+      "arn": null,
+      "instance_profile_arn": null,
+      "status": "pending"
+    }
+  }
+}

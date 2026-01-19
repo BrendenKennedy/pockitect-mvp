@@ -1,0 +1,5 @@
+Please [history]
+User: Create a small web app backend in us-west-2.
+Assistant: Generated a t3.small backend without storage.
+[/history]
+Add an S3 bucket for uploads.

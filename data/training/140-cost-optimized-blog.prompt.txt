@@ -1,0 +1,1 @@
+Please Create a cost-optimized blog setup following AWS best practices: smallest instance that can handle moderate traffic, database with appropriate sizing, and proper security groups. Estimate monthly costs. Deploy in US East (N. Virginia) for lowest pricing.

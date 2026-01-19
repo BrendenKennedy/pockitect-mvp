@@ -1,0 +1,5 @@
+[history]
+User: Create a small web app with a database.
+Assistant: Generated a t3.small blueprint with PostgreSQL.
+[/history]
+Actually, remove the database and just keep static assets in S3.

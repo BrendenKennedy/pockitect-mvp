@@ -1,0 +1,1 @@
+Please Following cloud security best practices, create a production-ready setup: SSH restricted to office network (10.0.0.0/8), HTTPS only (no HTTP), database with encryption, IAM roles for least privilege. Estimate costs for production workload. Deploy in EU (Frankfurt) for GDPR compliance.

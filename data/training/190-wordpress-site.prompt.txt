@@ -1,0 +1,1 @@
+Please I need a WordPress site with a t3.small instance, MySQL database (30GB), S3 bucket for media uploads, and standard web ports. Deploy in EU (Frankfurt).

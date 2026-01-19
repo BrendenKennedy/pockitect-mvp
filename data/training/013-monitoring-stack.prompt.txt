@@ -1,0 +1,1 @@
+Deploy a monitoring infrastructure stack: t3.small instance for Prometheus and Grafana, PostgreSQL database (30GB) for metrics storage, S3 bucket for log archives. SSH restricted to office network (10.0.0.0/8), HTTP/HTTPS for dashboards. Deploy in Asia Pacific (Singapore).

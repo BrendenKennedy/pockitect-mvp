@@ -1,0 +1,39 @@
+{
+  "project": {
+    "name": "test-basic",
+    "description": "Basic integration test",
+    "region": "us-east-1",
+    "owner": "tester"
+  },
+  "network": {
+    "vpc_mode": "new",
+    "vpc_cidr": "10.0.0.0/16",
+    "subnet_type": "public",
+    "rules": [
+      { "port": 22, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SSH" }
+    ],
+    "status": "pending"
+  },
+  "compute": {
+    "instance_type": "t3.micro",
+    "image_id": "ami-0230bd60aa48260c6",
+    "user_data": "",
+    "status": "pending"
+  },
+  "data": {
+    "db": { "status": "skipped" },
+    "s3_bucket": { "status": "skipped" }
+  },
+  "security": {
+    "key_pair": {
+      "mode": "generate",
+      "name": "test-basic-key",
+      "status": "pending"
+    },
+    "iam_role": {
+      "enabled": true,
+      "role_name": "test-basic-role",
+      "status": "pending"
+    }
+  }
+}

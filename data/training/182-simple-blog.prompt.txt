@@ -1,0 +1,6 @@
+Please Create a simple blog backend with:
+- A small EC2 instance (t3.micro) running Ubuntu
+- Open ports for SSH (22), HTTP (80), and HTTPS (443)
+- A PostgreSQL database with 20GB storage
+- Generate a new SSH key pair
+- Deploy in US East (Ohio) region

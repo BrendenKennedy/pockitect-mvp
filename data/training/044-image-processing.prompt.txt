@@ -1,0 +1,1 @@
+Build an image processing service with t3.large instance, S3 bucket for input/output images, PostgreSQL database (35GB) for job tracking. Deploy in US East (N. Virginia).

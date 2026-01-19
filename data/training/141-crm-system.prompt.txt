@@ -1,0 +1,1 @@
+Please Create a CRM system with t3.large instance, PostgreSQL database (90GB) for customer data, S3 for attachments. Custom VPC (10.70.0.0/16). Deploy in US East (N. Virginia).

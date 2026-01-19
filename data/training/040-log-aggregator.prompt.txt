@@ -1,0 +1,1 @@
+Deploy a log aggregation system with t3.medium instance, PostgreSQL database (50GB) for log metadata, S3 for log archives. SSH restricted to 10.0.0.0/8. Deploy in Asia Pacific (Singapore).

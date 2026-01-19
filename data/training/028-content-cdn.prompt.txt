@@ -1,0 +1,1 @@
+Build a content CDN with t3.medium instance, S3 bucket for content storage, no database. HTTP and HTTPS only (no SSH). Deploy in US East (N. Virginia).

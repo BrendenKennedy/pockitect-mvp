@@ -1,0 +1,1 @@
+Build a mobile app backend: t3.medium instance running Node.js, MySQL database (35GB), S3 for user uploads. All standard ports open. Deploy in US East (Ohio).

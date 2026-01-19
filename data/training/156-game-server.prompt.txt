@@ -1,0 +1,1 @@
+Please Set up a game server with high-performance t3.large instance, custom VPC (10.20.0.0/16), MySQL database (40GB) for player data and leaderboards, open ports for game traffic (22, 80, 443, 7777 for game protocol). Deploy in US East (N. Virginia) for low latency.

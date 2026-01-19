@@ -1,0 +1,1 @@
+Please Set up an API gateway with t3.small instance, no database, no S3. Just HTTP and HTTPS ports. Deploy in US West (Oregon).

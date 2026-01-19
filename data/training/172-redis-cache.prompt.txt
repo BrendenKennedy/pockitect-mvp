@@ -1,0 +1,1 @@
+Please Set up a Redis caching layer with t3.medium instance, no database needed, just S3 for backup storage. SSH restricted to 192.168.0.0/16. Deploy in US East (N. Virginia).

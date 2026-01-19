@@ -1,0 +1,1 @@
+Please Create a chat application backend with t3.medium instance, PostgreSQL database (45GB) for messages, S3 for media files. WebSocket port 8080, HTTP/HTTPS. Deploy in Asia Pacific (Tokyo).

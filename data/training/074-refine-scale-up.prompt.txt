@@ -1,0 +1,5 @@
+[history]
+User: Create a small marketing site in us-east-1.
+Assistant: Generated a t3.small marketing site blueprint.
+[/history]
+Make it more powerful for higher traffic.

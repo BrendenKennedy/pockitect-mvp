@@ -1,0 +1,45 @@
+{
+  "project": {
+    "name": "test-docker",
+    "description": "Docker host with container support",
+    "region": "us-west-2",
+    "owner": "tester"
+  },
+  "network": {
+    "vpc_mode": "new",
+    "vpc_cidr": "10.0.0.0/16",
+    "subnet_type": "public",
+    "rules": [
+      { "port": 22, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SSH" },
+      { "port": 80, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "HTTP" },
+      { "port": 443, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "HTTPS" },
+      { "port": 8080, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "App Port" }
+    ],
+    "status": "pending"
+  },
+  "compute": {
+    "instance_type": "t3.medium",
+    "image_id": "ubuntu-24.04",
+    "user_data": "#!/bin/bash\napt update\napt install -y apt-transport-https ca-certificates curl software-properties-common\ncurl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -\nadd-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\"\napt update\napt install -y docker-ce docker-ce-cli containerd.io\nsystemctl enable docker\nsystemctl start docker\n",
+    "status": "pending"
+  },
+  "data": {
+    "db": { "status": "skipped" },
+    "s3_bucket": {
+      "name": "pockitect-test-docker-assets",
+      "status": "pending"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "mode": "generate",
+      "name": "test-docker-key",
+      "status": "pending"
+    },
+    "iam_role": {
+      "enabled": true,
+      "role_name": "test-docker-role",
+      "status": "pending"
+    }
+  }
+}

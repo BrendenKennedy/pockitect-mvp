@@ -1,0 +1,7 @@
+[tool_simulation]
+ContextProvider.get_projects_summary -> No projects found.
+ContextProvider.get_aws_specs -> using defaults for region/instance.
+User prompt: "I need a blog with a database but nothing too powerful."
+[/tool_simulation]
+
+I need a blog with a database but nothing too powerful.

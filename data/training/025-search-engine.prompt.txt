@@ -1,0 +1,1 @@
+Deploy a search engine infrastructure with t3.large instance, PostgreSQL database (100GB) for index storage, S3 for document archives. Custom VPC (10.40.0.0/16). Deploy in US West (Oregon).

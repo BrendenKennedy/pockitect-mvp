@@ -1,0 +1,40 @@
+{
+  "project": {
+    "name": "test-webserver",
+    "description": "Web server with Nginx - HTTP/HTTPS exposed",
+    "region": "us-east-1",
+    "owner": "tester"
+  },
+  "network": {
+    "vpc_mode": "default",
+    "subnet_type": "public",
+    "rules": [
+      { "port": 22, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SSH" },
+      { "port": 80, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "HTTP" },
+      { "port": 443, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "HTTPS" }
+    ],
+    "status": "pending"
+  },
+  "compute": {
+    "instance_type": "t3.small",
+    "image_id": "ubuntu-22.04",
+    "user_data": "#!/bin/bash\napt update\napt install -y nginx\nsystemctl enable nginx\nsystemctl start nginx\necho \"<h1>Hello from Pockitect!</h1>\" > /var/www/html/index.html\n",
+    "status": "pending"
+  },
+  "data": {
+    "db": { "status": "skipped" },
+    "s3_bucket": { "status": "skipped" }
+  },
+  "security": {
+    "key_pair": {
+      "mode": "generate",
+      "name": "test-webserver-key",
+      "status": "pending"
+    },
+    "iam_role": {
+      "enabled": true,
+      "role_name": "test-webserver-role",
+      "status": "pending"
+    }
+  }
+}

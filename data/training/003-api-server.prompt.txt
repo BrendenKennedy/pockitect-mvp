@@ -1,0 +1,7 @@
+I need an API server setup:
+- Medium-sized instance (t3.medium) for better performance
+- Node.js installed via user data script
+- MySQL database with 50GB storage
+- SSH access restricted to my IP (10.0.0.0/8)
+- HTTP/HTTPS open to the world
+- US West (Oregon) region

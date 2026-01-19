@@ -1,0 +1,42 @@
+# Pockitect Deployment Template
+project:
+  name: my-web-app
+  region: us-east-1
+
+resources:
+  # VPC
+  main_vpc:
+    type: vpc
+    properties:
+      cidr_block: 10.0.0.0/16
+      tags:
+        Environment: Dev
+
+  # Subnet (depends on VPC implicitly via deployer logic or order)
+  web_subnet:
+    type: subnet
+    properties:
+      cidr_block: 10.0.1.0/24
+      vpc_id: null # Will be filled from context if null, or explicit
+      
+  # Security Group
+  web_sg:
+    type: security_group
+    properties:
+      description: "Allow HTTP access"
+      ingress:
+        - protocol: tcp
+          from_port: 80
+          to_port: 80
+          cidr: 0.0.0.0/0
+        - protocol: tcp
+          from_port: 22
+          to_port: 22
+          cidr: 0.0.0.0/0
+
+  # EC2 Instance
+  web_server:
+    type: ec2_instance
+    properties:
+      instance_type: t2.micro
+      image_id: ami-0c7217cdde317cfec # Ubuntu 22.04 LTS us-east-1

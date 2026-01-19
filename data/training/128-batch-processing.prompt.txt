@@ -1,0 +1,1 @@
+Please Set up a batch processing infrastructure: t3.large instance for job execution, S3 bucket for input data and processed results, PostgreSQL database (60GB) for job tracking and metadata. SSH restricted to 10.0.0.0/8, HTTP/HTTPS for job status API. Deploy in US East (Ohio).

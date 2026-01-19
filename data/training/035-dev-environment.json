@@ -1,0 +1,72 @@
+{
+  "project": {
+    "name": "dev-environment",
+    "description": "Simple development environment",
+    "region": "us-east-2",
+    "created_at": "2026-01-19T16:17:09.742633Z",
+    "owner": "developer",
+    "cost": null
+  },
+  "network": {
+    "vpc_id": null,
+    "subnet_id": null,
+    "security_group_id": null,
+    "vpc_env": "prod",
+    "rules": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "SSH"
+      }
+    ],
+    "status": "pending",
+    "subnet_type": "public"
+  },
+  "compute": {
+    "instance_type": "t3.micro",
+    "image_id": null,
+    "user_data": "",
+    "instance_id": null,
+    "status": "pending",
+    "image_name": "ubuntu-22.04"
+  },
+  "data": {
+    "db": {
+      "engine": null,
+      "instance_class": null,
+      "allocated_storage_gb": null,
+      "username": null,
+      "password": null,
+      "endpoint": null,
+      "status": "skipped"
+    },
+    "s3_bucket": {
+      "name": null,
+      "arn": null,
+      "status": "skipped"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "name": "dev-environment-key",
+      "mode": "generate",
+      "key_pair_id": null,
+      "private_key_pem": null,
+      "status": "pending"
+    },
+    "certificate": {
+      "domain": null,
+      "mode": "skip",
+      "cert_arn": null,
+      "status": "skipped"
+    },
+    "iam_role": {
+      "role_name": "dev-environment-role",
+      "policy_document": {},
+      "arn": null,
+      "instance_profile_arn": null,
+      "status": "pending"
+    }
+  }
+}

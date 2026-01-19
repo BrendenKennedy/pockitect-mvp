@@ -1,0 +1,1 @@
+Following microservices best practices, set up a scalable service: instance sized for horizontal scaling, database with connection pooling considerations, S3 for shared state. Estimate can scale to 10k requests/minute. Include cost breakdown. Deploy in US West (Oregon).

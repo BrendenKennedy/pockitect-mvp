@@ -1,0 +1,78 @@
+{
+  "project": {
+    "name": "network-security",
+    "description": "Secure network setup following security best practices - estimated $80-120/month",
+    "region": "eu-central-1",
+    "created_at": "2026-01-19T16:17:09.749928Z",
+    "owner": "security-team",
+    "cost": null
+  },
+  "network": {
+    "vpc_id": null,
+    "subnet_id": null,
+    "security_group_id": null,
+    "vpc_env": "dev",
+    "rules": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "cidr": "10.0.0.0/8",
+        "description": "SSH (restricted)"
+      },
+      {
+        "port": 443,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "HTTPS"
+      }
+    ],
+    "status": "pending",
+    "subnet_type": "public"
+  },
+  "compute": {
+    "instance_type": "t3.medium",
+    "image_id": null,
+    "user_data": "",
+    "instance_id": null,
+    "status": "pending",
+    "image_name": "ubuntu-22.04"
+  },
+  "data": {
+    "db": {
+      "engine": "postgres",
+      "instance_class": "db.t3.small",
+      "allocated_storage_gb": 40,
+      "username": "secure_admin",
+      "password": null,
+      "endpoint": null,
+      "status": "pending"
+    },
+    "s3_bucket": {
+      "name": null,
+      "arn": null,
+      "status": "skipped"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "name": "network-security-key",
+      "mode": "generate",
+      "key_pair_id": null,
+      "private_key_pem": null,
+      "status": "pending"
+    },
+    "certificate": {
+      "domain": null,
+      "mode": "skip",
+      "cert_arn": null,
+      "status": "skipped"
+    },
+    "iam_role": {
+      "role_name": "network-security-role",
+      "policy_document": {},
+      "arn": null,
+      "instance_profile_arn": null,
+      "status": "pending"
+    }
+  }
+}

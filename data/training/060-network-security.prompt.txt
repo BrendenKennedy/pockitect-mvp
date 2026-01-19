@@ -1,0 +1,1 @@
+Following network security best practices, create a secure setup: custom VPC with private subnets consideration, security groups with least privilege, SSH restricted to specific IP ranges. Estimate network costs. Include compliance considerations. Deploy in EU (Frankfurt).

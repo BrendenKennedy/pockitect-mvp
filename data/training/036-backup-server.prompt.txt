@@ -1,0 +1,1 @@
+Create a backup server with t3.medium instance, S3 bucket for backups, PostgreSQL database (40GB) for backup metadata. SSH and HTTPS. Deploy in Asia Pacific (Tokyo).

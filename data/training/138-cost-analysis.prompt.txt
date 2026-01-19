@@ -1,0 +1,1 @@
+Please Create a setup and provide detailed cost breakdown: EC2 instance costs, RDS database costs, S3 storage costs, data transfer estimates. Compare t3.micro vs t3.small pricing. Include monthly and annual estimates. Deploy in US East (N. Virginia) for cost comparison.

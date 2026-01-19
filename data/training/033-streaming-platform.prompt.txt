@@ -1,0 +1,1 @@
+Build a streaming platform with t3.large instance, PostgreSQL database (70GB) for user data, S3 for video content. Custom VPC (10.60.0.0/16). Deploy in US West (Oregon).

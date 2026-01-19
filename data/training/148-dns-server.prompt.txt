@@ -1,0 +1,1 @@
+Please Create a DNS server with t3.micro instance, no database, no S3. Just DNS port 53 and SSH. Deploy in US West (Oregon).

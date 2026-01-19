@@ -1,0 +1,1 @@
+I need a tiny API backend but my budget is $25/month. Keep it as cheap as possible and use reasonable defaults.

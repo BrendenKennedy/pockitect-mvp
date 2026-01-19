@@ -1,0 +1,6 @@
+Set up hosting for a static website with:
+- A t3.micro instance with nginx pre-installed
+- S3 bucket for storing static assets
+- Only HTTP and HTTPS ports open
+- No database needed
+- Deploy in EU (Ireland)

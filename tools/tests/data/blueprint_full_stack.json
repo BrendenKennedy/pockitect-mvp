@@ -1,0 +1,51 @@
+{
+  "project": {
+    "name": "test-full-stack",
+    "description": "Full stack: EC2 + PostgreSQL + S3 + new VPC",
+    "region": "us-east-1",
+    "owner": "tester"
+  },
+  "network": {
+    "vpc_mode": "new",
+    "vpc_cidr": "10.10.0.0/16",
+    "subnet_type": "public",
+    "rules": [
+      { "port": 22, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SSH" },
+      { "port": 80, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "HTTP" },
+      { "port": 443, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "HTTPS" },
+      { "port": 5432, "protocol": "tcp", "cidr": "10.0.0.0/8", "description": "PostgreSQL (private)" }
+    ],
+    "status": "pending"
+  },
+  "compute": {
+    "instance_type": "t3.medium",
+    "image_id": "ubuntu-22.04",
+    "user_data": "#!/bin/bash\napt update\napt install -y nginx postgresql-client awscli\nsystemctl enable nginx\nsystemctl start nginx\n",
+    "status": "pending"
+  },
+  "data": {
+    "db": {
+      "engine": "postgres",
+      "instance_class": "db.t3.small",
+      "allocated_storage_gb": 50,
+      "username": "admin",
+      "status": "pending"
+    },
+    "s3_bucket": {
+      "name": "pockitect-test-full-stack-assets",
+      "status": "pending"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "mode": "generate",
+      "name": "test-full-stack-key",
+      "status": "pending"
+    },
+    "iam_role": {
+      "enabled": true,
+      "role_name": "test-full-stack-role",
+      "status": "pending"
+    }
+  }
+}

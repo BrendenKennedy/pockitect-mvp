@@ -1,0 +1,5 @@
+Please [history]
+User: Create a small blog backend with a simple web server.
+Assistant: Generated a t3.small blog blueprint without a database.
+[/history]
+Make it bigger and add a database for posts.

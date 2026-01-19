@@ -1,0 +1,1 @@
+Deploy a simple web server in the mars-north-1 region with SSH and HTTP.

@@ -1,0 +1,1 @@
+Create a time-series database server with t3.large instance, PostgreSQL database (200GB) for metrics, S3 for exports. Custom VPC (10.80.0.0/16). Deploy in EU (Ireland).

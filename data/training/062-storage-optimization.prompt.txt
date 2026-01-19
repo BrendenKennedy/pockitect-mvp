@@ -1,0 +1,1 @@
+Following storage best practices, create a setup optimized for S3 usage: minimal compute, large S3 bucket for object storage, database for metadata only. Estimate S3 storage and transfer costs. Include lifecycle policies consideration. Deploy in US West (Oregon).

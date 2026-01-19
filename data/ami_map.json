@@ -1,0 +1,101 @@
+{
+  "default": "ubuntu-22.04",
+  "images": {
+    "ubuntu-22.04": {
+      "ssm_parameter": "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id",
+      "ec2_filters": {
+        "owners": ["099720109477"],
+        "name_pattern": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+      }
+    },
+    "ubuntu-22.04-arm64": {
+      "ssm_parameter": "/aws/service/canonical/ubuntu/server/22.04/stable/current/arm64/hvm/ebs-gp2/ami-id",
+      "ec2_filters": {
+        "owners": ["099720109477"],
+        "name_pattern": "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-arm64-server-*"
+      }
+    },
+    "ubuntu-20.04": {
+      "ssm_parameter": "/aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id",
+      "ec2_filters": {
+        "owners": ["099720109477"],
+        "name_pattern": "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
+      }
+    },
+    "ubuntu-20.04-arm64": {
+      "ssm_parameter": "/aws/service/canonical/ubuntu/server/20.04/stable/current/arm64/hvm/ebs-gp2/ami-id",
+      "ec2_filters": {
+        "owners": ["099720109477"],
+        "name_pattern": "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-arm64-server-*"
+      }
+    },
+    "ubuntu-24.04": {
+      "ssm_parameter": "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp2/ami-id",
+      "ec2_filters": {
+        "owners": ["099720109477"],
+        "name_pattern": "ubuntu/images/hvm-ssd/ubuntu-noble-24.04-amd64-server-*"
+      }
+    },
+    "ubuntu-24.04-arm64": {
+      "ssm_parameter": "/aws/service/canonical/ubuntu/server/24.04/stable/current/arm64/hvm/ebs-gp2/ami-id",
+      "ec2_filters": {
+        "owners": ["099720109477"],
+        "name_pattern": "ubuntu/images/hvm-ssd/ubuntu-noble-24.04-arm64-server-*"
+      }
+    },
+    "amazon-linux-2": {
+      "ssm_parameter": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+    },
+    "amazon-linux-2-arm64": {
+      "ssm_parameter": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2"
+    },
+    "amazon-linux-2023": {
+      "ssm_parameter": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+    },
+    "amazon-linux-2023-arm64": {
+      "ssm_parameter": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
+    },
+    "windows-2022-full": {
+      "ssm_parameter": "/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base"
+    },
+    "windows-2022-core": {
+      "ssm_parameter": "/aws/service/ami-windows-latest/Windows_Server-2022-English-Core-Base"
+    },
+    "windows-2019-full": {
+      "ssm_parameter": "/aws/service/ami-windows-latest/Windows_Server-2019-English-Full-Base"
+    },
+    "windows-2019-core": {
+      "ssm_parameter": "/aws/service/ami-windows-latest/Windows_Server-2019-English-Core-Base"
+    },
+    "dlami-ubuntu-22.04-gpu": {
+      "ec2_filters": {
+        "owners": ["898082745236", "amazon"],
+        "name_pattern": "*Deep Learning AMI GPU*Ubuntu 22.04*"
+      }
+    },
+    "dlami-ubuntu-20.04-gpu": {
+      "ec2_filters": {
+        "owners": ["898082745236", "amazon"],
+        "name_pattern": "*Deep Learning AMI GPU*Ubuntu 20.04*"
+      }
+    },
+    "dlami-amazon-linux-2-gpu": {
+      "ec2_filters": {
+        "owners": ["898082745236", "amazon"],
+        "name_pattern": "*Deep Learning AMI GPU*Amazon Linux 2*"
+      }
+    },
+    "dlami-al2023-base-oss-gpu": {
+      "ec2_filters": {
+        "owners": ["898082745236", "amazon"],
+        "name_pattern": "Deep Learning Base OSS Nvidia Driver GPU AMI (Amazon Linux 2023)*"
+      }
+    },
+    "dlami-al2023-base-oss-gpu-arm64": {
+      "ec2_filters": {
+        "owners": ["898082745236", "amazon"],
+        "name_pattern": "Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2023)*"
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Please Create the most cost-effective setup possible while maintaining basic functionality: smallest viable instance, minimal database, no S3 unless necessary. Target under $20/month. Include cost optimization tips. Deploy in US East (N. Virginia).

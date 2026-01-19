@@ -1,0 +1,1 @@
+Set up testing infrastructure with t3.small instance, MySQL database (15GB) for test data, no S3. All ports open. Deploy in US West (California).

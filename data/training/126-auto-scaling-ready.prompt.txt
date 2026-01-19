@@ -1,0 +1,1 @@
+Please Following auto-scaling best practices, create a setup designed for horizontal scaling: stateless application considerations, database with connection pooling, S3 for shared state. Estimate scaling costs from 1-10 instances. Deploy in US East (Ohio).

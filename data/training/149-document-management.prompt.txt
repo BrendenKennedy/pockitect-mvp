@@ -1,0 +1,1 @@
+Please Build a document management system with t3.medium instance, PostgreSQL database (65GB) for documents, S3 for file storage. HTTP/HTTPS. Deploy in EU (Ireland).

@@ -1,0 +1,1 @@
+Please Create a cost-effective staging environment following best practices: use smaller instance sizes, minimal database storage, S3 for test data. Estimate 50% cost savings vs production. Include auto-shutdown considerations. Deploy in US West (California).

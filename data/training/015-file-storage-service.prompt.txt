@@ -1,0 +1,1 @@
+Create a file storage service with t3.medium EC2 instance, S3 bucket for file storage, PostgreSQL database (25GB) for file metadata and access logs. SSH and HTTPS only (no HTTP). Deploy in EU (Ireland).

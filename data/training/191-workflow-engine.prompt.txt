@@ -1,0 +1,1 @@
+Please Set up a workflow engine with t3.large instance, PostgreSQL database (85GB) for workflow state, S3 for artifacts. Custom VPC (10.90.0.0/16). Deploy in Asia Pacific (Singapore).

@@ -1,0 +1,1 @@
+Create an email server with t3.small instance, MySQL database (20GB) for mailboxes, no S3. SMTP port 25, IMAP 143, HTTP/HTTPS. Deploy in US East (N. Virginia).

@@ -1,0 +1,78 @@
+{
+  "project": {
+    "name": "blockchain-node",
+    "description": "Blockchain node with transaction database and chain backups",
+    "region": "ap-southeast-1",
+    "created_at": "2026-01-19T16:17:09.741763Z",
+    "owner": "blockchain-dev",
+    "cost": null
+  },
+  "network": {
+    "vpc_id": null,
+    "subnet_id": null,
+    "security_group_id": null,
+    "vpc_env": "dev",
+    "rules": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "SSH"
+      },
+      {
+        "port": 443,
+        "protocol": "tcp",
+        "cidr": "0.0.0.0/0",
+        "description": "HTTPS"
+      }
+    ],
+    "status": "pending",
+    "subnet_type": "public"
+  },
+  "compute": {
+    "instance_type": "t3.large",
+    "image_id": null,
+    "user_data": "",
+    "instance_id": null,
+    "status": "pending",
+    "image_name": "ubuntu-22.04"
+  },
+  "data": {
+    "db": {
+      "engine": "postgres",
+      "instance_class": "db.t3.medium",
+      "allocated_storage_gb": 120,
+      "username": "blockchain_admin",
+      "password": null,
+      "endpoint": null,
+      "status": "pending"
+    },
+    "s3_bucket": {
+      "name": "blockchain-chain-backups",
+      "arn": null,
+      "status": "pending"
+    }
+  },
+  "security": {
+    "key_pair": {
+      "name": "blockchain-node-key",
+      "mode": "generate",
+      "key_pair_id": null,
+      "private_key_pem": null,
+      "status": "pending"
+    },
+    "certificate": {
+      "domain": null,
+      "mode": "skip",
+      "cert_arn": null,
+      "status": "skipped"
+    },
+    "iam_role": {
+      "role_name": "blockchain-node-role",
+      "policy_document": {},
+      "arn": null,
+      "instance_profile_arn": null,
+      "status": "pending"
+    }
+  }
+}

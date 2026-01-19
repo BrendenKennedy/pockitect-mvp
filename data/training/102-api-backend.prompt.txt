@@ -1,0 +1,7 @@
+[tool_simulation]
+ContextProvider.get_projects_summary -> No projects found.
+ContextProvider.get_aws_specs -> using defaults for region/instance.
+User prompt: "Need an API backend with Node, not sure what size."
+[/tool_simulation]
+
+Need an API backend with Node, not sure what size.

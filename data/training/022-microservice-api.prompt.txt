@@ -1,0 +1,1 @@
+Create a microservice API with t3.small instance, PostgreSQL database (25GB), no S3. SSH and HTTP/HTTPS open. Deploy in US West (California).

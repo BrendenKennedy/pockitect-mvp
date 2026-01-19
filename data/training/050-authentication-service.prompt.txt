@@ -1,0 +1,1 @@
+Deploy an authentication service with t3.medium instance, PostgreSQL database (40GB) for user accounts, no S3. HTTPS only, SSH restricted to 10.0.0.0/8. Deploy in US East (N. Virginia).

@@ -1,0 +1,1 @@
+Following compliance best practices (GDPR, HIPAA considerations), create a compliant setup: data encryption, restricted access, audit logging to S3, secure networking. Estimate compliance overhead costs. Deploy in EU (Ireland) for GDPR.

@@ -1,0 +1,1 @@
+Following monitoring and observability best practices, set up infrastructure with logging considerations: instance for monitoring tools, database for metrics storage, S3 for log archives. Estimate logging costs. Include alerting setup. Deploy in EU (Ireland).

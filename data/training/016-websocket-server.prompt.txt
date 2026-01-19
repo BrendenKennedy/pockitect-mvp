@@ -1,0 +1,1 @@
+Deploy a WebSocket server infrastructure: t3.medium instance for real-time communication, PostgreSQL database (35GB) for connection state and message history, S3 for media attachments. Open ports 22, 80, 443, and 8080 for WebSocket. Deploy in US West (California).

@@ -1,0 +1,89 @@
+{
+  "regions": {
+    "us-east-1": {
+      "prod": "vpc-0c7c13fd24419bfca",
+      "dev": "vpc-017a1ecaed61221db",
+      "test": "vpc-0b52496c3b725c61d"
+    },
+    "us-east-2": {
+      "prod": "vpc-039daf351c1c9fa57",
+      "dev": "vpc-038bf9adc569d2be9",
+      "test": "vpc-00806751a48630444"
+    },
+    "us-west-1": {
+      "prod": "vpc-04e9b7e1232eefcbe",
+      "dev": "vpc-06830d8b1fdce1017",
+      "test": "vpc-0bea75e55474a7d6d"
+    },
+    "us-west-2": {
+      "prod": "vpc-0978cd13816dc1a35",
+      "dev": "vpc-07e97fc39d552bfe2",
+      "test": "vpc-03599837b87e3c451"
+    },
+    "eu-central-1": {
+      "prod": "vpc-086eea57b565ca702",
+      "dev": "vpc-02553024175ddbf62",
+      "test": "vpc-0611fa2e86284dcc5"
+    },
+    "eu-west-1": {
+      "prod": "vpc-05d6bd836435fb9be",
+      "dev": "vpc-075158a33056a7d6e",
+      "test": "vpc-0da71df675112ddc2"
+    },
+    "eu-west-2": {
+      "prod": "vpc-051bf33e881f64345",
+      "dev": "vpc-01a36e1e0f0e42490",
+      "test": "vpc-089fbb5b6660fcff2"
+    },
+    "eu-west-3": {
+      "prod": "vpc-0511b1be5b2d74aa5",
+      "dev": "vpc-02b28fcdbbf92d948",
+      "test": "vpc-0f15b9d901088fc11"
+    },
+    "eu-north-1": {
+      "prod": "vpc-0a120c44c709607eb",
+      "dev": "vpc-0ba7474fff7d6e3b7",
+      "test": "vpc-0eed9177672cb7992"
+    },
+    "ap-northeast-1": {
+      "prod": "vpc-0ac13454f68a1c961",
+      "dev": "vpc-054ba7ec7aa2d74d0",
+      "test": "vpc-056347d4a177bfc54"
+    },
+    "ap-northeast-2": {
+      "prod": "vpc-04ee8fbf0f17e79eb",
+      "dev": "vpc-0e4e4f0d0e8f06dc7",
+      "test": "vpc-0b39b0035bb2b3f60"
+    },
+    "ap-northeast-3": {
+      "prod": "vpc-0ecc69a57b7a569ea",
+      "dev": "vpc-0e17dc09b2cf62066",
+      "test": "vpc-04efdf68f6b7df118"
+    },
+    "ap-southeast-1": {
+      "prod": "vpc-012da3991b597b86b",
+      "dev": "vpc-0bd6facbeefdb2183",
+      "test": "vpc-03ee55f64a1c3ae3c"
+    },
+    "ap-southeast-2": {
+      "prod": "vpc-034d29a7ad25a5aa2",
+      "dev": "vpc-07a369fa4e565ba86",
+      "test": "vpc-0abdef2b20a17e414"
+    },
+    "ap-south-1": {
+      "prod": "vpc-05735b91eefdf753e",
+      "dev": "vpc-022f74ac46ed785ef",
+      "test": "vpc-0711098a40e1c5c83"
+    },
+    "ca-central-1": {
+      "prod": "vpc-0f56483d5affced77",
+      "dev": "vpc-0baa8a65ad2c8d19b",
+      "test": "vpc-03b0a485cf22628e9"
+    },
+    "sa-east-1": {
+      "prod": "vpc-0fbc317776f99418f",
+      "dev": "vpc-02ea8d1b80534b406",
+      "test": "vpc-0e39ca6e0db106a79"
+    }
+  }
+}

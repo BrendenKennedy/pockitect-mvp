@@ -1,0 +1,4 @@
+# This directory stores training data pairs for AI fine-tuning
+# Format:
+#   NNN-name.json       - The project blueprint JSON
+#   NNN-name.prompt.txt - Natural language prompt that would generate this blueprint

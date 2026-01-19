@@ -1,0 +1,1 @@
+Please Following cloud-native best practices, create a modern setup: container-ready infrastructure, microservices considerations, API-first design, stateless architecture. Estimate container orchestration costs. Include 12-factor app principles. Deploy in US West (Oregon).

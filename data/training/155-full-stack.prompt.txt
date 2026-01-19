@@ -1,0 +1,8 @@
+Please Deploy a full-stack application with everything:
+- t3.small instance with nginx
+- PostgreSQL database (30GB)
+- S3 bucket for user uploads
+- SSL certificate for api.example.com via ACM
+- All standard web ports plus 8080 for the app
+- Use existing SSH key named "my-team-key"
+- EU (Frankfurt) region

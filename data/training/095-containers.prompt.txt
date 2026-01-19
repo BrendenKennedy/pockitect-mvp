@@ -1,0 +1,7 @@
+[tool_simulation]
+ContextProvider.get_projects_summary -> No projects found.
+ContextProvider.get_aws_specs -> using defaults for region/instance.
+User prompt: "Something for running containers, keep it simple."
+[/tool_simulation]
+
+Something for running containers, keep it simple.

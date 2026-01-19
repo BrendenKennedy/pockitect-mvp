@@ -1,0 +1,1 @@
+Please Deploy a message queue server with t3.medium instance, PostgreSQL database (30GB) for queue metadata, S3 for dead letter storage. Deploy in Asia Pacific (Tokyo).

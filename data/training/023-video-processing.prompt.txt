@@ -1,0 +1,1 @@
+Set up a video processing server with t3.large instance, S3 bucket for input/output videos, PostgreSQL database (40GB) for job metadata. SSH restricted to 10.0.0.0/8. Deploy in EU (Ireland).

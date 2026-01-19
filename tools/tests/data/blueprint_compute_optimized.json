@@ -1,0 +1,39 @@
+{
+  "project": {
+    "name": "test-compute-optimized",
+    "description": "Compute-optimized instance for CPU-intensive workloads",
+    "region": "us-east-1",
+    "owner": "tester"
+  },
+  "network": {
+    "vpc_mode": "default",
+    "subnet_type": "public",
+    "rules": [
+      { "port": 22, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "SSH" },
+      { "port": 8080, "protocol": "tcp", "cidr": "0.0.0.0/0", "description": "Application" }
+    ],
+    "status": "pending"
+  },
+  "compute": {
+    "instance_type": "c5.large",
+    "image_id": "ubuntu-22.04",
+    "user_data": "#!/bin/bash\napt update && apt install -y build-essential\n",
+    "status": "pending"
+  },
+  "data": {
+    "db": { "status": "skipped" },
+    "s3_bucket": { "status": "skipped" }
+  },
+  "security": {
+    "key_pair": {
+      "mode": "generate",
+      "name": "test-compute-optimized-key",
+      "status": "pending"
+    },
+    "iam_role": {
+      "enabled": true,
+      "role_name": "test-compute-optimized-role",
+      "status": "pending"
+    }
+  }
+}

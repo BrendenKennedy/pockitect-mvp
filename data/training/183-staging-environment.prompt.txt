@@ -1,0 +1,1 @@
+Please Set up a staging environment with t3.small instance, MySQL database (20GB), S3 for test data. All ports open. Deploy in US East (Ohio).

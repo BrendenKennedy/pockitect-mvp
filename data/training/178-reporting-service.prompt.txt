@@ -1,0 +1,1 @@
+Please Build a reporting service with t3.medium instance, PostgreSQL database (75GB) for reports, S3 for PDF exports. SSH restricted to 10.0.0.0/8. Deploy in EU (Frankfurt).

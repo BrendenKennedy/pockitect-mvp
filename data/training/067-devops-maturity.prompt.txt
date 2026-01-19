@@ -1,0 +1,1 @@
+Following DevOps maturity model best practices, create a production-ready setup: infrastructure as code considerations, automated deployments, monitoring and alerting, backup strategies. Estimate operational overhead costs. Deploy in EU (Frankfurt).

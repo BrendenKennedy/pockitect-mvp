@@ -1,0 +1,1 @@
+Set up a machine learning training server with a t3.large EC2 instance, 100GB PostgreSQL database for storing training results and metadata, S3 bucket for datasets and model artifacts, SSH access restricted to 10.0.0.0/8, and HTTP/HTTPS for model serving API. Deploy in US West (Oregon) region.
