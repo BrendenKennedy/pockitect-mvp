@@ -11,3 +11,4 @@ projects/
 logs/
 *.log
 .env
+data/finetuning/output/
