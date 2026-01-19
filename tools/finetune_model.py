@@ -21,7 +21,7 @@ def _require_unsloth():
     try:
         from unsloth import FastLanguageModel  # type: ignore
         from trl import SFTTrainer  # type: ignore
-        from transformers import TrainingArguments  # type: ignore
+        from transformers import TrainingArguments, EarlyStoppingCallback  # type: ignore
         from datasets import load_dataset  # type: ignore
     except Exception as exc:
         raise RuntimeError(
@@ -30,7 +30,7 @@ def _require_unsloth():
             "And ensure torch, transformers, datasets, and trl are installed."
         ) from exc
 
-    return FastLanguageModel, SFTTrainer, TrainingArguments, load_dataset
+    return FastLanguageModel, SFTTrainer, TrainingArguments, load_dataset, EarlyStoppingCallback
 
 
 def _write_modelfile(output_dir: Path, base_model: str, adapter_dir: Path) -> Path:
@@ -64,6 +64,10 @@ def main() -> int:
     parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--save-steps", type=int, default=200)
     parser.add_argument("--logging-steps", type=int, default=25)
+    parser.add_argument("--early-stopping", action="store_true", help="Enable early stopping based on validation loss")
+    parser.add_argument("--early-stopping-patience", type=int, default=3, help="Number of eval steps with no improvement before stopping")
+    parser.add_argument("--eval-split", type=float, default=0.1, help="Fraction of data to use for validation (0.1 = 10%%)")
+    parser.add_argument("--eval-steps", type=int, default=50, help="Evaluate every N steps")
 
     args = parser.parse_args()
 
@@ -78,13 +82,23 @@ def main() -> int:
     # Avoid fused CE loss auto-detection when free VRAM is very low.
     os.environ.setdefault("UNSLOTH_CE_LOSS_TARGET_GB", "0.2")
 
-    FastLanguageModel, SFTTrainer, TrainingArguments, load_dataset = _require_unsloth()
+    FastLanguageModel, SFTTrainer, TrainingArguments, load_dataset, EarlyStoppingCallback = _require_unsloth()
 
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Loading dataset: {args.train}")
-    dataset = load_dataset("json", data_files=str(args.train), split="train")
+    full_dataset = load_dataset("json", data_files=str(args.train), split="train")
+
+    # Split dataset for validation if early stopping is enabled
+    eval_dataset = None
+    if args.early_stopping:
+        split = full_dataset.train_test_split(test_size=args.eval_split, seed=42)
+        dataset = split["train"]
+        eval_dataset = split["test"]
+        print(f"Split dataset: {len(dataset)} train, {len(eval_dataset)} eval")
+    else:
+        dataset = full_dataset
 
     print(f"Loading base model: {args.model}")
     model, tokenizer = FastLanguageModel.from_pretrained(
@@ -104,7 +118,8 @@ def main() -> int:
         use_gradient_checkpointing="unsloth",
     )
 
-    training_args = TrainingArguments(
+    # Build training arguments
+    training_kwargs = dict(
         output_dir=str(output_dir),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
@@ -118,6 +133,18 @@ def main() -> int:
         optim="adamw_8bit",
         report_to="none",
     )
+
+    # Add evaluation settings if early stopping is enabled
+    if args.early_stopping:
+        training_kwargs.update(
+            eval_strategy="steps",
+            eval_steps=args.eval_steps,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_loss",
+            greater_is_better=False,
+        )
+
+    training_args = TrainingArguments(**training_kwargs)
 
     def _format_single(instruction, inp, output):
         parts = [instruction or "", inp or "", output or ""]
@@ -139,7 +166,8 @@ def main() -> int:
 
         return [_format_single(instruction, inp, output)]
 
-    trainer = SFTTrainer(
+    # Build trainer kwargs
+    trainer_kwargs = dict(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
@@ -148,8 +176,24 @@ def main() -> int:
         args=training_args,
     )
 
+    # Add eval dataset and early stopping callback if enabled
+    callbacks = []
+    if args.early_stopping:
+        trainer_kwargs["eval_dataset"] = eval_dataset
+        callbacks.append(EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience))
+        print(f"Early stopping enabled: patience={args.early_stopping_patience}, eval every {args.eval_steps} steps")
+
+    if callbacks:
+        trainer_kwargs["callbacks"] = callbacks
+
+    trainer = SFTTrainer(**trainer_kwargs)
+
     print("Starting fine-tuning...")
     trainer.train()
+
+    # Report if early stopping triggered
+    if args.early_stopping and trainer.state.global_step < (len(dataset) // args.batch_size) * args.epochs:
+        print(f"⚠️  Early stopping triggered at step {trainer.state.global_step}")
 
     adapter_dir = output_dir / "adapter"
     adapter_dir.mkdir(parents=True, exist_ok=True)
