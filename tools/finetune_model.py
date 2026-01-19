@@ -118,6 +118,20 @@ def main() -> int:
         use_gradient_checkpointing="unsloth",
     )
 
+    # Detect GPU capability for fp16/bf16 selection
+    # bf16 requires Ampere+ (compute capability 8.0+), T4 is 7.5
+    import torch
+    use_bf16 = False
+    use_fp16 = False
+    if torch.cuda.is_available():
+        capability = torch.cuda.get_device_capability()
+        if capability[0] >= 8:  # Ampere or newer
+            use_bf16 = True
+            print(f"GPU compute capability {capability[0]}.{capability[1]} - using bf16")
+        else:
+            use_fp16 = True
+            print(f"GPU compute capability {capability[0]}.{capability[1]} - using fp16 (bf16 requires Ampere+)")
+
     # Build training arguments
     training_kwargs = dict(
         output_dir=str(output_dir),
@@ -128,8 +142,8 @@ def main() -> int:
         logging_steps=args.logging_steps,
         save_steps=args.save_steps,
         save_total_limit=2,
-        fp16=False,
-        bf16=True,
+        fp16=use_fp16,
+        bf16=use_bf16,
         optim="adamw_8bit",
         report_to="none",
     )
