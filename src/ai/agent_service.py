@@ -6,6 +6,8 @@ import logging
 from typing import Optional, Dict, Any, Literal
 from dataclasses import dataclass
 
+from PySide6.QtCore import QObject, Signal
+
 from .ollama_client import OllamaClient
 from .context_provider import ContextProvider
 from .yaml_generator import YAMLGenerator
@@ -39,13 +41,17 @@ class AgentResponse:
     confirmation_details: Optional[Dict[str, Any]] = None
 
 
-class AgentService:
+class AgentService(QObject):
     """
     Main service that coordinates AI agent functionality.
     Handles intent detection, YAML generation, and command execution.
     """
+    tool_started = Signal(str)
+    tool_finished = Signal(str, str)
+    stream_chunk = Signal(str)
     
     def __init__(self, monitor_tab=None):
+        super().__init__()
         self.ollama_client = OllamaClient()
         self.context_provider = ContextProvider(monitor_tab)
         self.yaml_generator = YAMLGenerator(self.ollama_client)
@@ -88,7 +94,12 @@ class AgentService:
                 if ambiguity.get("is_ambiguous"):
                     resolved = self.ambiguity_detector.resolve_with_context(ambiguity, context)
                 prompt_input = self._append_resolved_context(user_input, resolved)
-                blueprint = self.yaml_generator.generate_blueprint(prompt_input, context, history=history)
+                blueprint = self.yaml_generator.generate_blueprint(
+                    prompt_input,
+                    context,
+                    history=history,
+                    stream_callback=self.stream_chunk.emit,
+                )
                 response = AgentResponse(
                     intent=intent,
                     blueprint=blueprint,
@@ -111,7 +122,12 @@ class AgentService:
                         intent=intent,
                         message="Ollama is not reachable. Please ensure it is running on localhost:11434."
                     )
-                blueprint = self.yaml_generator.generate_blueprint(user_input, context, history=history)
+                blueprint = self.yaml_generator.generate_blueprint(
+                    user_input,
+                    context,
+                    history=history,
+                    stream_callback=self.stream_chunk.emit,
+                )
                 response = AgentResponse(
                     intent=intent,
                     blueprint=blueprint,
@@ -268,7 +284,7 @@ class AgentService:
         else:
             tool_request = parse_tool_request(user_input)
             if tool_request:
-                tool_result = self.tool_executor.execute(tool_request)
+                tool_result = self._execute_tool_request(tool_request)
                 return AgentResponse(intent=intent, message=tool_result)
 
             return AgentResponse(
@@ -365,6 +381,13 @@ class AgentService:
             lines.append(f"- {key}: {value}")
         return "\n".join(lines)
 
+    def _execute_tool_request(self, request) -> str:
+        tool_name = request.name
+        self.tool_started.emit(tool_name)
+        result = self.tool_executor.execute(request)
+        self.tool_finished.emit(tool_name, result)
+        return result
+
     def _refresh_stale_context(self, intent: AgentIntent, context: Dict[str, Any]) -> None:
         resources_age = context.get("resources_age_seconds")
         budget_age = context.get("budget_age_seconds")
@@ -375,7 +398,7 @@ class AgentService:
                     "[TOOL_REQUEST]\nname: scan_resources\nargs: {}\n[/TOOL_REQUEST]"
                 )
                 if request:
-                    self.tool_executor.execute(request)
+                    self._execute_tool_request(request)
 
         if intent.type in ("budget", "query"):
             if isinstance(budget_age, int) and budget_age > 3600:
@@ -383,7 +406,7 @@ class AgentService:
                     "[TOOL_REQUEST]\nname: refresh_costs\nargs: {}\n[/TOOL_REQUEST]"
                 )
                 if request:
-                    self.tool_executor.execute(request)
+                    self._execute_tool_request(request)
     
     def _extract_project_name(self, text: str) -> Optional[str]:
         """Extract project name from text using simple heuristics."""

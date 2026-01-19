@@ -7,7 +7,6 @@ from pathlib import Path
 import uuid
 from typing import List, Optional
 
-import yaml
 from PySide6.QtCore import QObject, QThread, Signal, Qt
 from PySide6.QtWidgets import (
     QWidget,
@@ -17,10 +16,13 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QPushButton,
     QMessageBox,
+    QScrollArea,
 )
 
 from .agent_service import AgentService, AgentResponse
 from .preview_dialog import YAMLPreviewDialog
+from .chat_widgets import MessageBubble, ToolCallBadge, TypingIndicator
+from .yaml_summary import summarize_blueprint
 import logging
 
 logger = logging.getLogger(__name__)
@@ -72,8 +74,15 @@ class AIAgentTab(QWidget):
         self._last_response: Optional[AgentResponse] = None
         self._last_blueprint = None
         self._last_errors: List[str] = []
+        self._streaming_bubble: Optional[MessageBubble] = None
+        self._streaming_text: str = ""
+        self._tool_badges: List[ToolCallBadge] = []
+        self._history_log: List[str] = []
         self._history_path = Path("data/cache/ai_history.txt")
         self._setup_ui()
+        self.agent_service.tool_started.connect(self._on_tool_started)
+        self.agent_service.tool_finished.connect(self._on_tool_finished)
+        self.agent_service.stream_chunk.connect(self._on_stream_chunk)
         self._load_history()
 
     def _setup_ui(self):
@@ -123,17 +132,23 @@ class AIAgentTab(QWidget):
         button_row.addStretch()
         layout.addLayout(button_row)
 
-        self.history_text = QTextEdit()
-        self.history_text.setReadOnly(True)
-        self.history_text.setPlaceholderText("Conversation history will appear here.")
-        self.history_text.setMinimumHeight(120)
-        layout.addWidget(self.history_text)
+        self.chat_scroll = QScrollArea()
+        self.chat_scroll.setWidgetResizable(True)
+        self.chat_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.chat_scroll.setMinimumHeight(320)
 
-        self.yaml_preview = QTextEdit()
-        self.yaml_preview.setReadOnly(True)
-        self.yaml_preview.setPlaceholderText("Generated YAML will appear here.")
-        self.yaml_preview.setMinimumHeight(180)
-        layout.addWidget(self.yaml_preview)
+        self.chat_container = QWidget()
+        self.chat_layout = QVBoxLayout(self.chat_container)
+        self.chat_layout.setContentsMargins(8, 8, 8, 8)
+        self.chat_layout.setSpacing(8)
+
+        self._typing_indicator = TypingIndicator()
+        self._typing_indicator.hide()
+
+        self.chat_layout.addWidget(self._typing_indicator)
+        self.chat_layout.addStretch(1)
+        self.chat_scroll.setWidget(self.chat_container)
+        layout.addWidget(self.chat_scroll)
 
     def _on_send_clicked(self):
         prompt = self.input_edit.toPlainText().strip()
@@ -149,6 +164,13 @@ class AIAgentTab(QWidget):
 
         self._last_prompt = prompt
         self._set_loading_state(True)
+        self._tool_badges = []
+
+        self._append_message("user", prompt)
+        self._append_history_line(f"User: {prompt}")
+        self._streaming_text = ""
+        self._streaming_bubble = self._append_message("assistant", "")
+        self._show_typing_indicator()
 
         self._thread = QThread(self)
         self._worker = _AgentWorker(prompt, self.agent_service, self._session_id)
@@ -166,19 +188,18 @@ class AIAgentTab(QWidget):
     def _start_new_session(self):
         self.agent_service.session_manager.clear_session(self._session_id)
         self._session_id = uuid.uuid4().hex
-        self.history_text.clear()
+        self._clear_messages()
+        self._history_log = []
         self._save_history()
         self.status_label.setText("New session started.")
 
     def _on_response_received(self, response: AgentResponse):
         self._last_response = response
         self._set_loading_state(False)
+        self._hide_typing_indicator()
 
-        # Update history
-        self.history_text.append(f"User: {self._last_prompt}")
-        self.history_text.append(f"Assistant: {response.message}")
-        self.history_text.append("")
-        self._save_history()
+        if not self._streaming_bubble:
+            self._streaming_bubble = self._append_message("assistant", "")
 
         # Handle different response types
         if response.intent.type == "create" and response.blueprint:
@@ -189,8 +210,9 @@ class AIAgentTab(QWidget):
             self._last_blueprint = response.blueprint
             self._last_errors = [] if valid else errors
 
-            yaml_text = yaml.safe_dump(response.blueprint, sort_keys=False)
-            self.yaml_preview.setText(yaml_text)
+            summary = summarize_blueprint(response.blueprint)
+            self._streaming_bubble.set_text(summary)
+            self._append_history_line(f"Assistant: {summary}")
             self.preview_btn.setEnabled(True)
             self.confirm_btn.setEnabled(False)
 
@@ -201,24 +223,30 @@ class AIAgentTab(QWidget):
         
         elif response.requires_confirmation:
             # Command requiring confirmation
-            self.yaml_preview.setText(f"Command: {response.intent.type}\n\n{response.message}")
+            self._streaming_bubble.set_text(response.message)
+            self._append_history_line(f"Assistant: {response.message}")
             self.preview_btn.setEnabled(False)
             self.confirm_btn.setEnabled(True)
             self.status_label.setText("Action ready. Confirm to execute.")
         
         else:
             # Query or other non-action response
-            self.yaml_preview.setText(response.message)
+            final_text = response.message if response.message else self._streaming_text
+            self._streaming_bubble.set_text(final_text)
+            self._append_history_line(f"Assistant: {final_text}")
             self.preview_btn.setEnabled(False)
             self.confirm_btn.setEnabled(False)
             self.status_label.setText("Response received.")
+        
+        self._save_history()
 
     def _on_request_failed(self, message: str):
         self._set_loading_state(False)
+        self._hide_typing_indicator()
         self.status_label.setText("Request failed.")
-        self.history_text.append(f"User: {self._last_prompt}")
-        self.history_text.append("Assistant: Request failed. See error dialog for details.")
-        self.history_text.append("")
+        self._append_message("assistant", "Request failed. See error dialog for details.")
+        self._append_history_line(f"User: {self._last_prompt}")
+        self._append_history_line("Assistant: Request failed. See error dialog for details.")
         self._save_history()
         QMessageBox.critical(self, "Error", message)
 
@@ -276,7 +304,7 @@ class AIAgentTab(QWidget):
         def on_finished(success: bool, message: str):
             if success:
                 self.status_label.setText(f"Deployment started for '{project_name}'.")
-                self.history_text.append(f"Deployment started: {project_name}")
+                self._append_history_line(f"Deployment started: {project_name}")
             else:
                 self.status_label.setText(f"Deployment failed: {message}")
                 QMessageBox.warning(self, "Deployment Failed", message)
@@ -295,7 +323,7 @@ class AIAgentTab(QWidget):
         def on_finished(success: bool, message: str):
             if success:
                 self.status_label.setText(f"{action.capitalize()} command sent for '{project_name}'.")
-                self.history_text.append(f"{action.capitalize()} command: {project_name}")
+                self._append_history_line(f"{action.capitalize()} command: {project_name}")
             else:
                 self.status_label.setText(f"Power action failed: {message}")
                 QMessageBox.warning(self, "Power Action Failed", message)
@@ -344,7 +372,7 @@ class AIAgentTab(QWidget):
                     QMessageBox.warning(self, "Termination Errors", f"Some resources failed:\n{chr(10).join(errors[:5])}")
                 else:
                     self.status_label.setText(f"Termination completed for '{project_name}'.")
-                    self.history_text.append(f"Terminated: {project_name}")
+                    self._append_history_line(f"Terminated: {project_name}")
             
             worker.finished.connect(on_finished)
             worker.start()
@@ -359,7 +387,7 @@ class AIAgentTab(QWidget):
         if self.monitor_tab and hasattr(self.monitor_tab, 'monitor_service'):
             self.monitor_tab.monitor_service.request_scan(regions=[region] if region else None)
             self.status_label.setText(f"Scan requested for {region or 'all regions'}.")
-            self.history_text.append(f"Scan requested: {region or 'all regions'}")
+            self._append_history_line(f"Scan requested: {region or 'all regions'}")
         else:
             QMessageBox.warning(self, "Not Available", "Monitor service not available.")
         
@@ -372,6 +400,81 @@ class AIAgentTab(QWidget):
         if self._thread:
             self._thread.deleteLater()
             self._thread = None
+
+    def _append_message(self, role: str, text: str) -> MessageBubble:
+        bubble = MessageBubble(text, role=role)
+        wrapper = QWidget()
+        layout = QHBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        if role == "user":
+            layout.addStretch(1)
+            layout.addWidget(bubble)
+        else:
+            layout.addWidget(bubble)
+            layout.addStretch(1)
+
+        insert_index = max(0, self.chat_layout.count() - 2)
+        self.chat_layout.insertWidget(insert_index, wrapper)
+        self._scroll_to_bottom()
+        return bubble
+
+    def _append_history_line(self, line: str) -> None:
+        self._history_log.append(line)
+
+    def _clear_messages(self) -> None:
+        while self.chat_layout.count() > 2:
+            item = self.chat_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+        self._streaming_bubble = None
+        self._streaming_text = ""
+
+    def _scroll_to_bottom(self) -> None:
+        bar = self.chat_scroll.verticalScrollBar()
+        bar.setValue(bar.maximum())
+
+    def _show_typing_indicator(self) -> None:
+        self._typing_indicator.show()
+        self._typing_indicator.start()
+        self._scroll_to_bottom()
+
+    def _hide_typing_indicator(self) -> None:
+        self._typing_indicator.stop()
+        self._typing_indicator.hide()
+
+    def _on_tool_started(self, tool_name: str) -> None:
+        badge = ToolCallBadge(tool_name, status="running")
+        wrapper = QWidget()
+        layout = QHBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(badge)
+        layout.addStretch(1)
+
+        insert_index = max(0, self.chat_layout.count() - 2)
+        self.chat_layout.insertWidget(insert_index, wrapper)
+        self._tool_badges.append(badge)
+        self._scroll_to_bottom()
+
+    def _on_tool_finished(self, tool_name: str, result: str) -> None:
+        for badge in reversed(self._tool_badges):
+            label = badge.findChild(QLabel)
+            if label and tool_name in label.text():
+                badge.update_status(tool_name, status="done")
+                break
+        if result:
+            self._append_message("assistant", result)
+            self._append_history_line(f"Assistant: {result}")
+            self._save_history()
+
+    def _on_stream_chunk(self, text: str) -> None:
+        if not text:
+            return
+        if not self._streaming_bubble:
+            self._streaming_bubble = self._append_message("assistant", "")
+        self._streaming_text += text
+        self._streaming_bubble.set_text(self._streaming_text)
+        self._scroll_to_bottom()
 
     def _show_preview_dialog(self):
         if not self._last_blueprint:
@@ -402,13 +505,14 @@ class AIAgentTab(QWidget):
         try:
             content = self._history_path.read_text(encoding="utf-8")
             if content.strip():
-                self.history_text.setText(content)
+                self._history_log = content.splitlines()
+                self._append_message("assistant", f"Previous session:\n{content}")
         except Exception:
             logger.debug("Failed to load AI history.")
 
     def _save_history(self):
         try:
             self._history_path.parent.mkdir(parents=True, exist_ok=True)
-            self._history_path.write_text(self.history_text.toPlainText(), encoding="utf-8")
+            self._history_path.write_text("\n".join(self._history_log), encoding="utf-8")
         except Exception:
             logger.debug("Failed to save AI history.")

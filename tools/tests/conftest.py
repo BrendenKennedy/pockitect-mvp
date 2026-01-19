@@ -1,6 +1,14 @@
 import sys
 import pytest
 from unittest.mock import MagicMock
+from pathlib import Path
+
+# --- PATH SETUP ---
+# Ensure src is in the Python path for imports
+ROOT = Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 # --- PATCH MISSING MODULES FOR LEGACY CODE ---
 # The application seems to have a mixed state where some legacy components 
@@ -17,10 +25,12 @@ except ImportError:
     mock_deploy.StepStatus = MagicMock
     mock_deploy.StatusPoller = MagicMock
 
+# pytest_plugins need to be importable from where pytest is run (workspace root)
+# Since fixtures are in tools/tests/fixtures/, we reference them via tools.tests.fixtures.*
 pytest_plugins = [
-    "tests.fixtures.redis",
-    "tests.fixtures.boto3_mocks",
-    "tests.fixtures.templates",
+    "tools.tests.fixtures.redis",
+    "tools.tests.fixtures.boto3_mocks",
+    "tools.tests.fixtures.templates",
 ]
 
 def pytest_addoption(parser):

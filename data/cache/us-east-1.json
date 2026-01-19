@@ -1,21 +1,5 @@
 [
   {
-    "id": "i-07008d18f89f044bd",
-    "type": "ec2_instance",
-    "region": "us-east-1",
-    "name": "app_server",
-    "state": "running",
-    "details": {
-      "type": "t3.large",
-      "public_ip": null,
-      "vpc_id": "vpc-017a1ecaed61221db"
-    },
-    "tags": {
-      "pockitect:project": "full-stack-app",
-      "Name": "app_server"
-    }
-  },
-  {
     "id": "vpc-017a1ecaed61221db",
     "type": "vpc",
     "region": "us-east-1",

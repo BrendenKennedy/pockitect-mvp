@@ -9,7 +9,7 @@ This script runs a full lifecycle test:
 5. Confirm Deletion
 
 Usage:
-    python -m tests.integration.test_lifecycle --blueprint tests/data/blueprint_basic.json
+    python -m tools.tests.integration.test_lifecycle --blueprint tools/tests/data/blueprint_basic.json
 """
 
 import argparse

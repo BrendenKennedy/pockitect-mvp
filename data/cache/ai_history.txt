@@ -1,0 +1,4 @@
+User: hello
+Assistant: Ollama is not reachable. Please ensure it is running on localhost:11434.
+User: hello
+Assistant: Ollama is not reachable. Please ensure it is running on localhost:11434.

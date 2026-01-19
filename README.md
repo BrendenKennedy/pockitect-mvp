@@ -30,29 +30,49 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run with Debug Logging (Recommended for Development)
-We provide a helper script that starts Redis in the background, redirects its logs to the `logs/` directory, and then launches the app.
+We provide helper scripts that automatically start Redis and Ollama in the background, redirect their logs to the `data/logs/` directory, and then launch the app.
 
+**On Linux/macOS/WSL:**
 ```bash
 ./debug_run.sh
 ```
 
+**On Windows (PowerShell):**
+```powershell
+.\debug_run.ps1
+```
+
 **Log Files:**
-- `logs/pockitect.log`: Main application logs.
-- `logs/redis.log`: Redis server logs (if started by the script).
+- `data/logs/pockitect.log`: Main application logs.
+- `data/logs/redis.log`: Redis server logs (if started by the script).
+- `data/logs/ollama.log`: Ollama server logs (if started by the script).
+
+**Note:** The scripts will check if Redis and Ollama are already running, and only start them if needed. Ensure Ollama is installed and a model is available (e.g., `ollama pull llama3.2`) for AI Agent features to work.
 
 ### Manual Startup (Production-like)
 
-**Run Application:**
+**On Linux/macOS/WSL:**
 ```bash
 ./run.sh
 ```
 
+**On Windows (PowerShell):**
+```powershell
+.\run.ps1
+```
+
 ## AI Agent
 
-The AI Agent uses Ollama for local LLM inference. Ensure Ollama is running:
+The AI Agent uses Ollama for local LLM inference. 
 
+**Quick Setup:**
+1. Install Ollama from https://ollama.ai
+2. Pull a model: `ollama pull llama3.2`
+3. Use `./debug_run.sh` - it will automatically start Ollama if needed
+
+**Manual Setup:**
+If running manually with `./run.sh`, ensure Ollama is running:
 ```bash
-ollama pull llama3.2
 ollama serve
 ```
 

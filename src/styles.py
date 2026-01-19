@@ -396,4 +396,29 @@ QFrame[frameShape="4"] { /* HLine */
     background-color: #0f3460;
     max-height: 1px;
 }
+
+/* AI chat bubbles */
+QFrame[role="user"] {
+    background-color: #1a4a7a;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+}
+
+QFrame[role="assistant"] {
+    background-color: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+}
+
+QFrame[role="tool"] {
+    background-color: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+}
+
+QFrame[role="typing"] {
+    background-color: #0f3460;
+    border: 1px solid #16213e;
+    border-radius: 8px;
+}
 """

@@ -12,3 +12,4 @@ logs/
 *.log
 .env
 data/finetuning/output/
+unsloth_compiled_cache/

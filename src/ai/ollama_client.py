@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional, Callable, TypeVar, Any
+from typing import Optional, Callable, TypeVar, Any, Iterable
 
 from .prompts import TOOL_REQUEST_FORMAT
 
@@ -80,6 +80,29 @@ class OllamaClient:
         except Exception as exc:
             logger.error("Ollama request failed after retries: %s", exc)
             raise
+
+    def generate_stream(self, prompt: str, system_prompt: Optional[str] = None) -> Iterable[str]:
+        """Yield response chunks as they arrive."""
+        self._ensure_client()
+        if system_prompt:
+            stream = self._client.chat(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                stream=True,
+            )
+            for chunk in stream:
+                content = chunk.get("message", {}).get("content", "")
+                if content:
+                    yield content
+            return
+        stream = self._client.generate(model=self.model, prompt=prompt, stream=True)
+        for chunk in stream:
+            content = chunk.get("response", "")
+            if content:
+                yield content
 
     def generate_with_tools(self, prompt: str, system_prompt: str, tools: list[dict]) -> Dict[str, Any]:
         """Generate a response that may include a tool request block."""

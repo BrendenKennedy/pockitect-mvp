@@ -20,13 +20,13 @@ Run a specific blueprint through the full lifecycle (Create → Verify → Delet
 
 ```bash
 # Mock mode (safe, free, recommended for development)
-python -m tests.integration.test_lifecycle --blueprint tests/data/blueprint_basic.json
+python -m tools.tests.integration.test_lifecycle --blueprint tools/tests/data/blueprint_basic.json
 
 # Real AWS mode (creates actual resources, costs money!)
-python -m tests.integration.test_lifecycle --blueprint tests/data/blueprint_basic.json --real-aws
+python -m tools.tests.integration.test_lifecycle --blueprint tools/tests/data/blueprint_basic.json --real-aws
 
 # Keep resources after test (for debugging)
-python -m tests.integration.test_lifecycle --blueprint tests/data/blueprint_basic.json --keep-resources
+python -m tools.tests.integration.test_lifecycle --blueprint tools/tests/data/blueprint_basic.json --keep-resources
 ```
 
 ### Batch Test Runner
@@ -34,18 +34,18 @@ Run ALL blueprint templates at once:
 
 ```bash
 # Mock mode - tests all 22 blueprints
-python -m tests.integration.test_all_blueprints
+python -m tools.tests.integration.test_all_blueprints
 
 # Filter by name pattern
-python -m tests.integration.test_all_blueprints --filter postgres
+python -m tools.tests.integration.test_all_blueprints --filter postgres
 
 # Real AWS mode (EXPENSIVE - use with caution!)
-python -m tests.integration.test_all_blueprints --real-aws
+python -m tools.tests.integration.test_all_blueprints --real-aws
 ```
 
 ## Test Blueprint Templates
 
-Located in `tests/data/`. Each template covers different configuration combinations:
+Located in `tools/tests/data/`. Each template covers different configuration combinations:
 
 ### Basic Templates
 | File | Description |
@@ -151,7 +151,7 @@ For automated testing in CI pipelines:
 
 ```bash
 # Run in mock mode (no AWS credentials needed)
-python -m tests.integration.test_all_blueprints
+python -m tools.tests.integration.test_all_blueprints
 
 # Exit code 0 = all passed, 1 = failures
 ```

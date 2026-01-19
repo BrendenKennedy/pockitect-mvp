@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Callable, Optional
 
 import yaml
 
@@ -16,10 +16,23 @@ class YAMLGenerator:
     def __init__(self, ollama_client: OllamaClient | None = None) -> None:
         self.ollama_client = ollama_client or OllamaClient()
 
-    def generate_blueprint(self, user_input: str, context: Dict[str, Any], history: str = "") -> Dict[str, Any]:
+    def generate_blueprint(
+        self,
+        user_input: str,
+        context: Dict[str, Any],
+        history: str = "",
+        stream_callback: Optional[Callable[[str], None]] = None,
+    ) -> Dict[str, Any]:
         system_prompt = YAML_SYSTEM_PROMPT
         prompt = self._build_prompt(user_input, context, history=history)
-        response = self.ollama_client.generate(prompt, system_prompt=system_prompt)
+        if stream_callback:
+            chunks = []
+            for chunk in self.ollama_client.generate_stream(prompt, system_prompt=system_prompt):
+                chunks.append(chunk)
+                stream_callback(chunk)
+            response = "".join(chunks)
+        else:
+            response = self.ollama_client.generate(prompt, system_prompt=system_prompt)
         blueprint = self._parse_yaml_from_response(response)
         merged = self._apply_defaults(blueprint)
         self._validate_blueprint(merged)

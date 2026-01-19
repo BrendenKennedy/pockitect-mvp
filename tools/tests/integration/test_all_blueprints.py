@@ -1,12 +1,12 @@
 """
 Batch Test Runner for All Blueprint Templates
 
-Runs the lifecycle test against every blueprint in tests/data/.
+Runs the lifecycle test against every blueprint in tools/tests/data/.
 Reports pass/fail status for each.
 
 Usage:
-    python -m tests.integration.test_all_blueprints
-    python -m tests.integration.test_all_blueprints --real-aws  # WARNING: costs money!
+    python -m tools.tests.integration.test_all_blueprints
+    python -m tools.tests.integration.test_all_blueprints --real-aws  # WARNING: costs money!
 """
 
 import argparse
