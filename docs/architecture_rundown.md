@@ -40,11 +40,12 @@ The main wiring is centralized in `src/main.py` and coordinated by background th
 - **Resource monitoring thread**: `src/monitor_service.py`
 - **Command listeners**: `src/app/core/listeners.py`
 - **Redis client + pubsub**: `src/app/core/redis_client.py`
+- **Redis event stream**: `RedisClient.iter_events` shared by UI services and workers
 
 ### AWS Integration
 
 - **Scanner**: `src/app/core/aws/scanner.py`
-- **Deployer**: `src/app/core/aws/deployer.py`
+- **Deployer**: `src/app/core/aws/deployer.py` (orchestrates via `AWSResourceManager`)
 - **Resource management & deletion**: `src/app/core/aws/resources.py`, `src/app/core/aws/recursive_deleter.py`
 - **Resource tracking**: `src/app/core/aws/resource_tracker.py`
 - **Credential helper**: `src/app/core/aws/credentials_helper.py`

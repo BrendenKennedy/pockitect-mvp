@@ -173,6 +173,5 @@ src/
 │   │   ├── aws/        # Async AWS scanners and deployers
 │   │   ├── listeners.py # Redis command listener pool
 │   │   └── redis_client.py # Redis & PubSub wrapper
-├── wizard/             # Infrastructure creation wizard
-└── aws/                # Legacy/Sync AWS wrappers (used by wizard/monitor)
+└── wizard/             # Infrastructure creation wizard
 ```

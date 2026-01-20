@@ -76,6 +76,14 @@ class AWSResourceManager:
             except Exception as e:
                 logger.warning(f"Could not track resource: {e}")
 
+    def _build_tags(self, name: Optional[str] = None) -> list[dict]:
+        tags = [{"Key": "ManagedBy", "Value": "Pockitect"}]
+        if name:
+            tags.append({"Key": "Name", "Value": name})
+        if self.project_name:
+            tags.append({"Key": "pockitect:project", "Value": self.project_name})
+        return tags
+
     def _untrack(self, resource_id: str):
         if self._tracker:
             try:
@@ -112,7 +120,7 @@ class AWSResourceManager:
             response = self.ec2.create_vpc(
                 CidrBlock=cidr_block,
                 TagSpecifications=[
-                    {"ResourceType": "vpc", "Tags": [{"Key": "Name", "Value": name}]}
+                    {"ResourceType": "vpc", "Tags": self._build_tags(name)}
                 ],
             )
             vpc_id = response["Vpc"]["VpcId"]
@@ -202,7 +210,7 @@ class AWSResourceManager:
                 "VpcId": vpc_id,
                 "CidrBlock": cidr_block,
                 "TagSpecifications": [
-                    {"ResourceType": "subnet", "Tags": [{"Key": "Name", "Value": name}]}
+                    {"ResourceType": "subnet", "Tags": self._build_tags(name)}
                 ],
             }
 
@@ -251,7 +259,7 @@ class AWSResourceManager:
                 TagSpecifications=[
                     {
                         "ResourceType": "security-group",
-                        "Tags": [{"Key": "Name", "Value": name}],
+                        "Tags": self._build_tags(name),
                     }
                 ],
             )
@@ -260,11 +268,16 @@ class AWSResourceManager:
             if rules:
                 ip_permissions = []
                 for rule in rules:
+                    port = rule.get("port")
+                    from_port = rule.get("from_port", port)
+                    to_port = rule.get("to_port", port)
+                    if from_port is None or to_port is None:
+                        continue
                     ip_permissions.append(
                         {
                             "IpProtocol": rule.get("protocol", "tcp"),
-                            "FromPort": rule["port"],
-                            "ToPort": rule["port"],
+                            "FromPort": int(from_port),
+                            "ToPort": int(to_port),
                             "IpRanges": [
                                 {
                                     "CidrIp": rule.get("cidr", "0.0.0.0/0"),
@@ -555,10 +568,7 @@ class AWSResourceManager:
                 "TagSpecifications": [
                     {
                         "ResourceType": "instance",
-                        "Tags": [
-                            {"Key": "Name", "Value": name},
-                            {"Key": "ManagedBy", "Value": "Pockitect"},
-                        ],
+                        "Tags": self._build_tags(name),
                     }
                 ],
             }
@@ -725,7 +735,7 @@ class AWSResourceManager:
 
             self.s3.put_bucket_tagging(
                 Bucket=bucket_name,
-                Tagging={"TagSet": [{"Key": "ManagedBy", "Value": "Pockitect"}]},
+                Tagging={"TagSet": self._build_tags(bucket_name)},
             )
 
             bucket_arn = f"arn:aws:s3:::{bucket_name}"

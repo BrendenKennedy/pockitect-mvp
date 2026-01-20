@@ -9,15 +9,23 @@ import sys
 import os
 import json
 import logging
-import time
 from pathlib import Path
 
 # Fix for WSL and Linux Qt issues
+# On Windows, don't set QT_QPA_PLATFORM - let Qt auto-detect (uses 'windows' by default)
 if 'QT_QPA_PLATFORM' not in os.environ:
-    is_wsl = 'microsoft' in os.uname().release.lower() if hasattr(os, 'uname') else False
-    if is_wsl:
-        os.environ['QT_QPA_PLATFORM'] = 'wayland;xcb'
+    if sys.platform == 'win32':
+        # Windows: Qt will auto-detect 'windows' platform plugin
+        pass
+    elif hasattr(os, 'uname'):
+        # Linux/Unix: Check for WSL or use xcb
+        is_wsl = 'microsoft' in os.uname().release.lower()
+        if is_wsl:
+            os.environ['QT_QPA_PLATFORM'] = 'wayland;xcb'
+        else:
+            os.environ['QT_QPA_PLATFORM'] = 'xcb'
     else:
+        # Fallback for other Unix-like systems
         os.environ['QT_QPA_PLATFORM'] = 'xcb'
         
 os.environ.setdefault('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
@@ -27,10 +35,10 @@ os.environ.setdefault('QT_QPA_PLATFORMTHEME', '')
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTabWidget, QListWidget, QListWidgetItem, QPushButton, QLabel,
-    QMessageBox, QSplitter, QFrame, QTextEdit, QDialog, QLineEdit
+    QMessageBox, QDialog
 )
 from PySide6.QtCore import Qt, QSize, Signal, QTimer
-from PySide6.QtGui import QFont, QPalette, QColor
+from PySide6.QtGui import QFont
 
 
 # Add src to path for imports
@@ -54,14 +62,16 @@ from storage import (
     get_workspace_root,
     DEFAULT_PROJECTS_DIR,
     write_project_regions_cache,
-    get_project_regions,
+    get_preference,
 )
 from wizard.wizard import InfrastructureWizard
-from watcher import ProjectWatcher, start_watching, stop_watching
-from styles import DARK_THEME
+from template_selector_dialog import TemplateSelectorDialog
+from watcher import ProjectWatcher
+from styles import ThemeManager
 from auth_dialog import AWSLoginDialog
 from monitor_tab import ResourceMonitorWidget
 from monitor_service import ResourceMonitoringService
+from quotas_tab import QuotasTab
 from status_event_service import StatusEventService
 from project_row import ProjectRowWidget
 from workers import DeleteWorker, PowerWorker
@@ -539,6 +549,11 @@ class MainWindow(QMainWindow):
         self.watcher = ProjectWatcher(self.projects_dir, parent=self)
         
         self._setup_ui()
+        
+        # Load and apply theme from preferences
+        theme_name = get_preference("theme", "modern_dark")
+        self.apply_theme(theme_name)
+        
         self.status_event_service = StatusEventService(self)
         self.status_event_service.status_event.connect(self.project_list.handle_status_event)
         self.status_event_service.status_event.connect(self._on_status_event)
@@ -547,6 +562,15 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         self.managed_vpc_ready.connect(self._ensure_managed_vpcs_ui)
         self.watcher.start()
+        
+        # Set up periodic scan timer (every 15 seconds)
+        self._scan_timer = QTimer(self)
+        self._scan_timer.timeout.connect(self._trigger_periodic_scan)
+        self._scan_timer.start(15000)  # 15 seconds in milliseconds
+        
+        # Trigger initial scan on application load
+        self._trigger_periodic_scan()
+        
         self._unlock_loading_state("Ready")
     
     def _setup_ui(self):
@@ -571,6 +595,7 @@ class MainWindow(QMainWindow):
         
         self.tabs.addTab(projects_container, "📁 Projects")
         self.tabs.addTab(self.monitor_tab, "🌐 Monitor")
+        self.tabs.addTab(QuotasTab(), "📊 Quotas")
         self.tabs.addTab(AIAgentTab(monitor_tab=self.monitor_tab), "🤖 AI Agent")
         from settings_tab import SettingsTab
         self.tabs.addTab(SettingsTab(self._ensure_managed_vpcs, parent=self), "Settings")
@@ -592,6 +617,10 @@ class MainWindow(QMainWindow):
         self.project_list.project_monitor.connect(self._on_monitor_project)
         self.watcher.projects_changed.connect(self._on_projects_changed)
         self.monitor_service.scan_error.connect(self._unlock_loading_state)
+    
+    def _trigger_periodic_scan(self):
+        """Trigger a resource scan - called on timer and on application load."""
+        self.monitor_service.request_scan(regions=None)
 
     def _ensure_managed_vpcs(self):
         def worker():
@@ -701,7 +730,12 @@ class MainWindow(QMainWindow):
         threading.Thread(target=create_missing, daemon=True).start()
     
     def _on_new_project(self):
-        wizard = InfrastructureWizard(self)
+        dialog = TemplateSelectorDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        template_blueprint = dialog.get_selected_blueprint()
+        wizard = InfrastructureWizard(self, template_blueprint=template_blueprint)
         wizard.blueprint_created.connect(self._on_blueprint_created)
         wizard.exec()
     
@@ -808,8 +842,21 @@ class MainWindow(QMainWindow):
             status="success",
         )
     
+    def apply_theme(self, theme_name: str):
+        """
+        Apply a theme to the application.
+        
+        Args:
+            theme_name: Name of the theme to apply
+        """
+        theme = ThemeManager.get_theme(theme_name)
+        app = QApplication.instance()
+        if app:
+            app.setStyleSheet(theme.qss_string)
+    
     def closeEvent(self, event):
         logger.info("Application shutting down...")
+        self._scan_timer.stop()
         self.monitor_service.stop()
         self.watcher.stop()
         self.command_listener.stop()
@@ -821,7 +868,11 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Pockitect")
-    app.setStyleSheet(DARK_THEME)
+    
+    # Load theme from preferences or use default
+    theme_name = get_preference("theme", "modern_dark")
+    theme = ThemeManager.get_theme(theme_name)
+    app.setStyleSheet(theme.qss_string)
     
     font = QFont("Ubuntu", 10)
     if not font.exactMatch():

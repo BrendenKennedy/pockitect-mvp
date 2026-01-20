@@ -1,15 +1,19 @@
 """
-Tests for the Deployment Orchestrator.
+Legacy tests for the old Deployment Orchestrator.
 
-These tests use mocking to avoid actual AWS API calls.
+These are kept for reference and are skipped if the legacy modules are absent.
 """
 
 import sys
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import time
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+pytest.importorskip("aws.deploy")
+pytest.importorskip("aws.resources")
 
 from aws.deploy import (
     DeploymentOrchestrator,

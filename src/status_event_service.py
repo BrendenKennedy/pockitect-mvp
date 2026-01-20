@@ -1,4 +1,3 @@
-import json
 import logging
 from PySide6.QtCore import QThread, Signal
 
@@ -20,12 +19,9 @@ class StatusEventService(QThread):
         super().__init__(parent)
         self._stop_requested = False
         self.redis = RedisClient()
-        self.pubsub = None
 
     def stop(self):
         self._stop_requested = True
-        if self.pubsub:
-            self.pubsub.close()
         self.wait()
 
     def run(self):
@@ -33,18 +29,15 @@ class StatusEventService(QThread):
             logger.error("StatusEventService: Redis not connected")
             return
 
-        self.pubsub = self.redis.client.pubsub()
-        self.pubsub.subscribe(CHANNEL_STATUS)
-
-        while not self._stop_requested:
-            try:
-                msg = self.pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if msg:
-                    data = json.loads(msg["data"])
-                    if isinstance(data, dict):
-                        self.status_event.emit(data)
-                        if data.get("type") in ("scan_chunk", "scan_complete"):
-                            self.scan_event.emit(data)
-            except Exception as exc:
-                logger.error("StatusEventService error: %s", exc)
-                self.msleep(500)
+        try:
+            for data in self.redis.iter_events(
+                CHANNEL_STATUS,
+                timeout=1.0,
+                stop_check=lambda: self._stop_requested,
+            ):
+                self.status_event.emit(data)
+                if data.get("type") in ("scan_chunk", "scan_complete"):
+                    self.scan_event.emit(data)
+        except Exception as exc:
+            logger.error("StatusEventService error: %s", exc)
+            self.msleep(500)

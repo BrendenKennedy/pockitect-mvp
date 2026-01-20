@@ -17,24 +17,10 @@ class BaseCommandWorker(QThread):
         allowed_types: Optional[Set[str]] = None,
         timeout: float = 0.5,
     ) -> Iterable[Dict]:
-        pubsub = self.redis.client.pubsub()
-        pubsub.subscribe(CHANNEL_STATUS)
-        try:
-            while True:
-                if self.isInterruptionRequested():
-                    break
-                msg = pubsub.get_message(
-                    ignore_subscribe_messages=True, timeout=timeout
-                )
-                if not msg:
-                    continue
-                data = self.redis.parse_pubsub_message(msg)
-                if not data:
-                    continue
-                if data.get("request_id") and data.get("request_id") != request_id:
-                    continue
-                if allowed_types and data.get("type") not in allowed_types:
-                    continue
-                yield data
-        finally:
-            pubsub.close()
+        return self.redis.iter_events(
+            CHANNEL_STATUS,
+            request_id=request_id,
+            allowed_types=allowed_types,
+            timeout=timeout,
+            stop_check=self.isInterruptionRequested,
+        )

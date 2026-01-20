@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Dict
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -15,19 +16,16 @@ from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QIcon, QPixmap, QPainter
 from PySide6.QtSvg import QSvgRenderer
 
-STATUS_COLORS = {
-    "pending": "#6c7086",
-    "creating": "#89b4fa",
-    "created": "#a6e3a1",
-    "running": "#a6e3a1",
-    "stopped": "#f9e2af",
-    "terminating": "#f38ba8",
-    "deleted": "#6c7086",
-    "failed": "#f38ba8",
-}
+from storage import get_preference
+from styles import ThemeManager
 
 # SVG icon definitions - using COLOR_PLACEHOLDER for dynamic coloring
 COLOR_PLACEHOLDER = "{{COLOR}}"
+
+
+def _get_theme_colors() -> Dict[str, str]:
+    theme_name = get_preference("theme", "modern_dark")
+    return ThemeManager.get_colors(theme_name)
 
 PENCIL_ICON_SVG = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="{COLOR_PLACEHOLDER}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -61,7 +59,7 @@ CLOSE_ICON_SVG = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 </svg>"""
 
 
-def create_icon_from_svg(svg_data: str, color: str = "#cdd6f4", size: int = 20) -> QIcon:
+def create_icon_from_svg(svg_data: str, color: str, size: int = 20) -> QIcon:
     """Create a QIcon from SVG data with a specific color."""
     renderer = QSvgRenderer()
     # Replace COLOR_PLACEHOLDER with the actual color
@@ -110,17 +108,20 @@ def create_icon_button(svg_data: str, tooltip: str, color: str, hover_color: str
 
 
 class DeveloperInfoCard(QFrame):
-    """A card showing useful developer information."""
+    """A card showing useful developer information with enhanced formatting."""
     
-    def __init__(self, title: str, content: str, parent=None):
+    def __init__(self, title: str, content: str, colors: Dict[str, str], parent=None, highlight: bool = False):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setStyleSheet("""
-            QFrame {
-                background: #1e1e2e;
-                border: 1px solid #313244;
+        # Use theme-aware styling
+        border_color = colors["accent"] if highlight else colors["border_secondary"]
+        background = colors["bg_secondary"]
+        self.setStyleSheet(f"""
+            QFrame {{
+                background: {background};
+                border: 2px solid {border_color};
                 border-radius: 8px;
-            }
+            }}
         """)
         
         layout = QVBoxLayout(self)
@@ -129,18 +130,23 @@ class DeveloperInfoCard(QFrame):
         
         # Title
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #cdd6f4; padding: 0px;")
+        title_label.setStyleSheet(
+            f"font-size: 13px; font-weight: bold; color: {colors['text_primary']}; padding: 0px;"
+        )
         title_label.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(title_label)
         
         # Content (supports plain text with newlines)
         self.content_label = QLabel(content)
-        self.content_label.setStyleSheet("""
-            font-size: 11px; 
-            color: #a6adc8; 
-            font-family: 'Courier New', monospace; 
+        self.content_label.setStyleSheet(
+            f"""
+            font-size: 11px;
+            color: {colors['text_secondary']};
+            font-family: 'Courier New', monospace;
             padding: 4px 0px;
-        """)
+            line-height: 1.4;
+            """
+        )
         self.content_label.setWordWrap(True)
         self.content_label.setTextFormat(Qt.TextFormat.PlainText)
         self.content_label.setContentsMargins(0, 0, 0, 0)
@@ -197,6 +203,7 @@ class ProjectRowWidget(QWidget):
         self._list_item = list_item
         self._monitor_resources = monitor_resources or []
         self._num_cards = 0  # Track number of info cards
+        self._colors = _get_theme_colors()
 
         self._setup_ui()
 
@@ -212,12 +219,16 @@ class ProjectRowWidget(QWidget):
         info_layout.setSpacing(6)
 
         self._name_label = QLabel(self.name)
-        self._name_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #cdd6f4; padding: 0px;")
+        self._name_label.setStyleSheet(
+            f"font-size: 16px; font-weight: bold; color: {self._colors['text_primary']}; padding: 0px;"
+        )
         self._name_label.setContentsMargins(0, 0, 0, 0)
         info_layout.addWidget(self._name_label)
 
         self._meta_label = QLabel(self._build_meta_text())
-        self._meta_label.setStyleSheet("color: #a6adc8; font-size: 12px; padding: 0px;")
+        self._meta_label.setStyleSheet(
+            f"color: {self._colors['text_secondary']}; font-size: 12px; padding: 0px;"
+        )
         self._meta_label.setContentsMargins(0, 0, 0, 0)
         info_layout.addWidget(self._meta_label)
 
@@ -228,7 +239,9 @@ class ProjectRowWidget(QWidget):
         status_layout.addWidget(self._status_label)
 
         self._count_label = QLabel()
-        self._count_label.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        self._count_label.setStyleSheet(
+            f"color: {self._colors['text_secondary']}; font-size: 11px;"
+        )
         self._update_count_label()
         status_layout.addWidget(self._count_label)
 
@@ -282,21 +295,16 @@ class ProjectRowWidget(QWidget):
         return meta_text
 
     def _status_style(self) -> str:
-        color = "#6c7086"  # Gray (draft)
-        if self.status == "running":
-            color = "#a6e3a1"
-        elif self.status == "stopped":
-            color = "#f9e2af"
-        elif self.status == "deploying":
-            color = "#89b4fa"
-        elif self.status == "starting":
-            color = "#89b4fa"
-        elif self.status == "stopping":
-            color = "#f9e2af"
-        elif self.status == "terminating":
-            color = "#f38ba8"
-        elif self.status == "failed":
-            color = "#f38ba8"
+        status = self.status
+        color = self._colors["status_muted"]  # draft/pending
+        if status in {"running", "created"}:
+            color = self._colors["status_ok"]
+        elif status in {"stopped", "stopping"}:
+            color = self._colors["status_warning"]
+        elif status in {"deploying", "starting"}:
+            color = self._colors["status_info"]
+        elif status in {"terminating", "failed"}:
+            color = self._colors["status_error"]
         return f"color: {color}; font-weight: bold; font-size: 11px;"
 
     def _update_count_label(self):
@@ -317,14 +325,16 @@ class ProjectRowWidget(QWidget):
 
     def _build_actions(self):
         self._clear_layout(self._actions_layout)
+        colors = self._colors
+        hover_bg = colors["bg_hover"]
 
         self.btn_edit = create_icon_button(
             PENCIL_ICON_SVG,
             "Edit Blueprint",
-            "#89b4fa",
-            "#74c7ec",
+            colors["status_info"],
+            colors["status_info"],
             bg_color="transparent",
-            hover_bg="#313244",
+            hover_bg=hover_bg,
         )
         self.btn_edit.clicked.connect(lambda: self.action_edit.emit(self.slug))
         self._actions_layout.addWidget(self.btn_edit)
@@ -333,10 +343,10 @@ class ProjectRowWidget(QWidget):
             self.btn_deploy = create_icon_button(
                 CLOUD_ICON_SVG,
                 "Deploy infrastructure to AWS",
-                "#a6e3a1",
-                "#94e2d5",
+                colors["status_ok"],
+                colors["status_ok"],
                 bg_color="transparent",
-                hover_bg="#313244",
+                hover_bg=hover_bg,
             )
             self.btn_deploy.clicked.connect(lambda: self.action_deploy.emit(self.slug))
             self._actions_layout.addWidget(self.btn_deploy)
@@ -347,20 +357,20 @@ class ProjectRowWidget(QWidget):
                 self.btn_power = create_icon_button(
                     STOP_ICON_SVG,
                     "Stop Instances",
-                    "#f38ba8",
-                    "#eba0ac",
+                    colors["status_error"],
+                    colors["status_error"],
                     bg_color="transparent",
-                    hover_bg="#313244",
+                    hover_bg=hover_bg,
                 )
                 self.btn_power.clicked.connect(lambda: self.action_stop.emit(self.name))
             else:
                 self.btn_power = create_icon_button(
                     PLAY_ICON_SVG,
                     "Start Instances",
-                    "#a6e3a1",
-                    "#94e2d5",
+                    colors["status_ok"],
+                    colors["status_ok"],
                     bg_color="transparent",
-                    hover_bg="#313244",
+                    hover_bg=hover_bg,
                 )
                 self.btn_power.clicked.connect(lambda: self.action_start.emit(self.name))
             self._actions_layout.addWidget(self.btn_power)
@@ -369,10 +379,10 @@ class ProjectRowWidget(QWidget):
             self.btn_terminate = create_icon_button(
                 TRASH_ICON_SVG,
                 "Terminate all resources",
-                "#f38ba8",
-                "#eba0ac",
+                colors["status_error"],
+                colors["status_error"],
                 bg_color="transparent",
-                hover_bg="#313244",
+                hover_bg=hover_bg,
             )
             if self.status in ["terminating", "stopping"]:
                 self.btn_terminate.setEnabled(False)
@@ -390,10 +400,10 @@ class ProjectRowWidget(QWidget):
         self.btn_delete = create_icon_button(
             CLOSE_ICON_SVG,
             "Delete Blueprint File",
-            "#6c7086",
-            "#a6adc8",
+            colors["status_muted"],
+            colors["text_secondary"],
             bg_color="transparent",
-            hover_bg="#313244",
+            hover_bg=hover_bg,
         )
         self.btn_delete.clicked.connect(self._confirm_delete_file)
         self._actions_layout.addWidget(self.btn_delete)
@@ -487,7 +497,7 @@ class ProjectRowWidget(QWidget):
         return super().mousePressEvent(event)
 
     def _build_developer_info_cards(self):
-        """Build developer-friendly information cards from monitor data and blueprint."""
+        """Build comprehensive developer-friendly information cards with live, accurate data."""
         # Clear existing cards properly to prevent double deletion
         for i in reversed(range(self._info_grid.count())):
             item = self._info_grid.itemAt(i)
@@ -503,6 +513,10 @@ class ProjectRowWidget(QWidget):
         ec2_instance = None
         rds_instance = None
         load_balancer = None
+        s3_resource = None
+        vpc_resource = None
+        iam_role = None
+        security_groups = []
         
         for res in self._monitor_resources:
             if res.type == "ec2_instance":
@@ -511,101 +525,239 @@ class ProjectRowWidget(QWidget):
                 rds_instance = res
             elif res.type in ("elb", "alb", "nlb", "load_balancer"):
                 load_balancer = res
+            elif res.type == "s3_bucket":
+                s3_resource = res
+            elif res.type == "vpc":
+                vpc_resource = res
+            elif res.type == "iam_role":
+                iam_role = res
+            elif res.type == "security_group":
+                security_groups.append(res)
         
-        # SSH / Server Access Card
+        network = self.blueprint.get("network", {})
+        compute = self.blueprint.get("compute", {})
+        data = self.blueprint.get("data", {})
+        security = self.blueprint.get("security", {})
+        project_info = self.blueprint.get("project", {}) if self.blueprint else {}
+        
+        # 1. EC2 Instance Details Card (Enhanced)
         if ec2_instance:
-            public_ip = ec2_instance.details.get("public_ip") or "—"
-            private_ip = ec2_instance.details.get("private_ip") or "—"
-            instance_type = ec2_instance.details.get("type") or "—"
+            instance_id = ec2_instance.id
+            public_ip = ec2_instance.details.get("public_ip") or compute.get("public_ip") or "—"
+            private_ip = ec2_instance.details.get("private_ip") or compute.get("private_ip") or "—"
+            instance_type = ec2_instance.details.get("type") or compute.get("instance_type") or "—"
             state = ec2_instance.state or "unknown"
+            vpc_id = ec2_instance.details.get("vpc_id") or network.get("vpc_id") or "—"
+            ami_id = compute.get("image_id") or "—"
             
             # Check if SSH is accessible
-            network = self.blueprint.get("network", {})
             ssh_open = self._is_sshable(network, public_ip)
             ssh_status = "✓ Port 22 OPEN" if ssh_open else "✗ Port 22 CLOSED"
             
-            ssh_content = f"""Public IP: {public_ip}\n{ssh_status}\nPrivate IP: {private_ip}\nType: {instance_type}\nState: {state}"""
+            # Build SSH command if available
+            key_name = security.get("key_pair", {}).get("name") or "—"
+            ssh_cmd = f"ssh -i ~/.ssh/{key_name}.pem ubuntu@{public_ip}" if (public_ip != "—" and key_name != "—") else "—"
             
-            cards.append(DeveloperInfoCard("🔐 SSH Access", ssh_content))
+            instance_content = f"""Instance ID: {instance_id}
+Public IP: {public_ip}
+Private IP: {private_ip}
+{ssh_status}
+Type: {instance_type}
+State: {state}
+AMI: {ami_id}
+VPC: {vpc_id[:20]}...
+SSH: {ssh_cmd}"""
+            
+            cards.append(
+                DeveloperInfoCard(
+                    "🖥️ EC2 Instance",
+                    instance_content,
+                    self._colors,
+                    highlight=(state == "running"),
+                )
+            )
         
-        # Database Card
+        # 2. Database Card (Enhanced)
         if rds_instance:
             db_details = rds_instance.details
-            engine = db_details.get("engine") or "—"
-            db_class = db_details.get("class") or "—"
-            endpoint = db_details.get("endpoint") or "—"
+            db_id = rds_instance.id
+            engine = db_details.get("engine") or data.get("db", {}).get("engine") or "—"
+            db_class = db_details.get("class") or data.get("db", {}).get("instance_class") or "—"
+            endpoint = db_details.get("endpoint") or data.get("db", {}).get("endpoint") or "—"
             state = rds_instance.state or "unknown"
+            port = db_details.get("port") or data.get("db", {}).get("port") or "—"
+            storage = db_details.get("allocated_storage") or data.get("db", {}).get("allocated_storage_gb") or "—"
+            username = data.get("db", {}).get("username") or "—"
             
-            db_content = f"""Endpoint: {endpoint}\nEngine: {engine}\nClass: {db_class}\nStatus: {state}"""
+            # Build connection string
+            conn_str = f"{engine}://{username}@{endpoint}:{port}" if (endpoint != "—" and username != "—") else "—"
             
-            cards.append(DeveloperInfoCard("🗄️ Database", db_content))
+            db_content = f"""DB ID: {db_id}
+Endpoint: {endpoint}
+Engine: {engine}
+Class: {db_class}
+Port: {port}
+Storage: {storage} GB
+Status: {state}
+Conn: {conn_str}"""
+            
+            cards.append(
+                DeveloperInfoCard(
+                    "🗄️ Database",
+                    db_content,
+                    self._colors,
+                    highlight=(state == "available"),
+                )
+            )
         
-        # Load Balancer Card
-        if load_balancer:
-            lb_details = load_balancer.details
-            dns_name = lb_details.get("dns_name") or lb_details.get("dns") or "—"
-            state = load_balancer.state or "unknown"
-            health_check = lb_details.get("health_check") or "—"
-            
-            lb_content = f"""DNS: {dns_name}\nStatus: {state}\nHealth Check: {health_check}"""
-            
-            cards.append(DeveloperInfoCard("⚖️ Load Balancer", lb_content))
-        
-        # S3 Bucket Card
-        s3_resource = None
-        for res in self._monitor_resources:
-            if res.type == "s3_bucket":
-                s3_resource = res
-                break
-        
-        if s3_resource:
-            bucket_name = s3_resource.name or s3_resource.id
-            region = s3_resource.region or "global"
-            
-            s3_content = f"""Bucket: {bucket_name}\nRegion: {region}\nStatus: {s3_resource.state or 'active'}"""
-            
-            cards.append(DeveloperInfoCard("🪣 S3 Bucket", s3_content))
-        
-        # Network Info Card
-        network = self.blueprint.get("network", {})
-        vpc_env = network.get("vpc_env") or "—"
+        # 3. Network & VPC Card (Enhanced)
         vpc_id = network.get("vpc_id") or "—"
-        
-        # Try to get VPC from monitor resources
-        vpc_resource = None
-        for res in self._monitor_resources:
-            if res.type == "vpc":
-                vpc_resource = res
-                break
+        vpc_env = network.get("vpc_env") or "—"
+        subnet_id = network.get("subnet_id") or "—"
+        sg_id = network.get("security_group_id") or "—"
         
         if vpc_resource:
             vpc_id = vpc_resource.id
             cidr = vpc_resource.details.get("cidr") or "—"
-            vpc_content = f"""VPC: {vpc_id}\nEnvironment: {vpc_env}\nCIDR: {cidr}"""
         else:
-            vpc_content = f"""VPC: {vpc_id}\nEnvironment: {vpc_env}"""
+            cidr = "—"
         
-        cards.append(DeveloperInfoCard("🌐 Network", vpc_content))
+        network_content = f"""VPC ID: {vpc_id[:20]}...
+Environment: {vpc_env}
+CIDR: {cidr}
+Subnet: {subnet_id[:20] if subnet_id != "—" else "—"}...
+SG: {sg_id[:20] if sg_id != "—" else "—"}...
+Region: {self.region}"""
         
-        # Open Ports Card
+        cards.append(DeveloperInfoCard("🌐 Network", network_content, self._colors))
+        
+        # 4. Security Groups & Ports Card (Enhanced)
         rules = network.get("rules", [])
-        if rules:
+        if rules or security_groups:
             open_ports = sorted(set([str(r.get("port", "")) for r in rules if r.get("port")]))
-            ports_text = ", ".join(open_ports[:10])
-            if len(open_ports) > 10:
-                ports_text += f" (+{len(open_ports) - 10} more)"
+            ports_text = ", ".join(open_ports[:8]) if open_ports else "None"
+            if len(open_ports) > 8:
+                ports_text += f" (+{len(open_ports) - 8})"
             
-            ports_content = f"""Open Ports: {ports_text}\nTotal Rules: {len(rules)}"""
+            sg_count = len(security_groups) if security_groups else 0
+            sg_info = f"{sg_count} SG(s)" if sg_count > 0 else "—"
             
-            cards.append(DeveloperInfoCard("🔓 Open Ports", ports_content))
+            ports_content = f"""Open Ports: {ports_text}
+Security Rules: {len(rules)}
+Security Groups: {sg_info}
+SSH (22): {'✓' if self._is_sshable(network, '') else '✗'}"""
+            
+            cards.append(DeveloperInfoCard("🔒 Security", ports_content, self._colors))
         
-        # Cost Card
-        project_info = self.blueprint.get("project", {}) if self.blueprint else {}
+        # 5. IAM & Access Card
+        iam_info = security.get("iam_role", {})
+        iam_role_name = iam_info.get("role_name") or (iam_role.name if iam_role else None) or "—"
+        iam_arn = iam_info.get("arn") or (iam_role.details.get("arn") if iam_role else None) or "—"
+        key_pair_name = security.get("key_pair", {}).get("name") or "—"
+        
+        if iam_role_name != "—" or key_pair_name != "—":
+            iam_content = f"""IAM Role: {iam_role_name[:30] if len(iam_role_name) > 30 else iam_role_name}
+ARN: {iam_arn[:40] if len(iam_arn) > 40 else iam_arn}...
+Key Pair: {key_pair_name}"""
+            
+            cards.append(DeveloperInfoCard("🔑 IAM & Keys", iam_content, self._colors))
+        
+        # 6. Load Balancer Card (Enhanced)
+        if load_balancer:
+            lb_details = load_balancer.details
+            lb_id = load_balancer.id
+            dns_name = lb_details.get("dns_name") or lb_details.get("dns") or "—"
+            state = load_balancer.state or "unknown"
+            lb_type = load_balancer.type or "—"
+            health_check = lb_details.get("health_check") or "—"
+            
+            lb_content = f"""LB ID: {lb_id[:20]}...
+DNS: {dns_name}
+Type: {lb_type}
+Status: {state}
+Health: {health_check}"""
+            
+            cards.append(DeveloperInfoCard("⚖️ Load Balancer", lb_content, self._colors))
+        
+        # 7. S3 Bucket Card (Enhanced)
+        if s3_resource:
+            bucket_name = s3_resource.name or s3_resource.id
+            region = s3_resource.region or "global"
+            state = s3_resource.state or "active"
+            arn = s3_resource.details.get("arn") or data.get("s3_bucket", {}).get("arn") or "—"
+            
+            s3_content = f"""Bucket: {bucket_name}
+Region: {region}
+Status: {state}
+ARN: {arn[:40] if len(arn) > 40 else arn}..."""
+            
+            cards.append(DeveloperInfoCard("🪣 S3 Storage", s3_content, self._colors))
+        
+        # 8. Resource IDs Card (Quick Reference)
+        resource_ids = []
+        if ec2_instance:
+            resource_ids.append(f"EC2: {ec2_instance.id[:15]}...")
+        if rds_instance:
+            resource_ids.append(f"RDS: {rds_instance.id[:15]}...")
+        if vpc_resource:
+            resource_ids.append(f"VPC: {vpc_resource.id[:15]}...")
+        if s3_resource:
+            resource_ids.append(f"S3: {s3_resource.id[:15]}...")
+        
+        if resource_ids:
+            ids_content = "\n".join(resource_ids[:6])
+            if len(resource_ids) > 6:
+                ids_content += f"\n... +{len(resource_ids) - 6} more"
+            
+            cards.append(DeveloperInfoCard("🆔 Resource IDs", ids_content, self._colors))
+        
+        # 9. Cost & Billing Card (Enhanced)
         cost = self.cost if self.cost is not None else project_info.get("cost")
         if cost is not None:
             cost_str = f"${cost:.2f}" if isinstance(cost, (int, float)) else str(cost)
-            cost_content = f"""Estimated Cost: {cost_str}\nPer Month"""
-            cards.append(DeveloperInfoCard("💰 Cost", cost_content))
+            monthly = cost_str
+            daily = f"${float(cost_str.replace('$', '')) / 30:.2f}" if isinstance(cost, (int, float)) else "—"
+            hourly = f"${float(cost_str.replace('$', '')) / 730:.4f}" if isinstance(cost, (int, float)) else "—"
+            
+            cost_content = f"""Monthly: {monthly}
+Daily: {daily}
+Hourly: {hourly}
+Status: {self.status}"""
+            
+            cards.append(DeveloperInfoCard("💰 Cost Estimate", cost_content, self._colors))
+        
+        # 10. Quick Commands Card
+        if ec2_instance:
+            public_ip = ec2_instance.details.get("public_ip") or compute.get("public_ip") or ""
+            key_name = security.get("key_pair", {}).get("name") or ""
+            instance_id = ec2_instance.id
+            
+            commands = []
+            if public_ip and key_name:
+                commands.append(f"ssh -i ~/.ssh/{key_name}.pem ubuntu@{public_ip}")
+            if instance_id:
+                commands.append(f"aws ec2 describe-instances --instance-ids {instance_id}")
+            if rds_instance:
+                endpoint = rds_instance.details.get("endpoint") or data.get("db", {}).get("endpoint") or ""
+                if endpoint:
+                    commands.append(f"aws rds describe-db-instances --db-instance-identifier {rds_instance.id}")
+            
+            if commands:
+                commands_content = "\n".join(commands[:4])
+                cards.append(DeveloperInfoCard("⚡ Quick Commands", commands_content, self._colors))
+        
+        # 11. Project Metadata Card
+        created_at = project_info.get("created_at") or "—"
+        owner = project_info.get("owner") or "—"
+        description = self.description or project_info.get("description") or "—"
+        
+        if created_at != "—" or owner != "—":
+            metadata_content = f"""Created: {created_at[:19] if len(created_at) > 19 else created_at}
+Owner: {owner}
+Status: {self.status.upper()}
+Resources: {self.resource_count}"""
+            
+            cards.append(DeveloperInfoCard("📋 Project Info", metadata_content, self._colors))
         
         # Add cards to grid (2 columns)
         self._num_cards = len(cards)

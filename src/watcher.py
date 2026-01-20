@@ -108,14 +108,14 @@ def get_project_watcher(projects_dir: Path) -> ProjectWatcher:
 
 
 def start_watching(projects_dir: Path) -> ProjectWatcher:
-    """Start watching the projects directory."""
+    """Start watching the projects directory (deprecated; use ProjectWatcher directly)."""
     watcher = get_project_watcher(projects_dir)
     watcher.start()
     return watcher
 
 
 def stop_watching():
-    """Stop the global watcher."""
+    """Stop the global watcher (deprecated; use ProjectWatcher directly)."""
     global _project_watcher
     
     if _project_watcher:

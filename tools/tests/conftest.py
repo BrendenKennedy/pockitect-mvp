@@ -1,6 +1,5 @@
 import sys
 import pytest
-from unittest.mock import MagicMock
 from pathlib import Path
 
 # --- PATH SETUP ---
@@ -9,21 +8,6 @@ ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
-
-# --- PATCH MISSING MODULES FOR LEGACY CODE ---
-# The application seems to have a mixed state where some legacy components 
-# (wizard) import 'aws.deploy' which is missing. We mock it to allow 'main' to import.
-try:
-    import aws.deploy
-except ImportError:
-    mock_deploy = MagicMock()
-    sys.modules["aws.deploy"] = mock_deploy
-    # Mock specific classes expected by consumers
-    mock_deploy.DeploymentOrchestrator = MagicMock
-    mock_deploy.DeploymentStatus = MagicMock
-    mock_deploy.DeploymentState = MagicMock
-    mock_deploy.StepStatus = MagicMock
-    mock_deploy.StatusPoller = MagicMock
 
 # pytest_plugins need to be importable from where pytest is run (workspace root)
 # Since fixtures are in tools/tests/fixtures/, we reference them via tools.tests.fixtures.*

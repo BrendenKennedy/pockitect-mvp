@@ -18,9 +18,15 @@ import logging
 import sys
 import time
 from pathlib import Path
+import pytest
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+
+pytest.importorskip("aws.deploy")
+pytest.importorskip("aws.resources")
+pytest.importorskip("aws.scanner")
+pytest.importorskip("aws.recursive_deleter")
 
 from aws.deploy import DeploymentOrchestrator, DeploymentStatus
 from aws.resources import AWSResourceManager

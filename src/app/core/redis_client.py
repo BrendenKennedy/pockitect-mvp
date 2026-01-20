@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 import redis
-from typing import Callable, Dict, Any, Optional
+from typing import Callable, Dict, Any, Optional, Iterable, Set
 
 from .config import REDIS_HOST, REDIS_PORT, REDIS_DB, CHANNEL_COMMANDS, CHANNEL_STATUS
 
@@ -101,6 +101,39 @@ class RedisClient:
             return None
         return payload if isinstance(payload, dict) else None
 
+    def iter_events(
+        self,
+        channel: str,
+        request_id: Optional[str] = None,
+        allowed_types: Optional[Set[str]] = None,
+        timeout: float = 0.5,
+        stop_check: Optional[Callable[[], bool]] = None,
+    ) -> Iterable[Dict[str, Any]]:
+        """Iterate parsed pub/sub events with optional filtering and stop callback."""
+        if not self.client:
+            return
+        pubsub = self.client.pubsub()
+        pubsub.subscribe(channel)
+        try:
+            while True:
+                if stop_check and stop_check():
+                    break
+                msg = pubsub.get_message(
+                    ignore_subscribe_messages=True, timeout=timeout
+                )
+                if not msg:
+                    continue
+                data = self.parse_pubsub_message(msg)
+                if not data:
+                    continue
+                if request_id is not None and data.get("request_id") and data.get("request_id") != request_id:
+                    continue
+                if allowed_types and data.get("type") not in allowed_types:
+                    continue
+                yield data
+        finally:
+            pubsub.close()
+
     def hset_json(self, name: str, key: str, value: Any):
         """Set a hash field to a JSON serialized value."""
         if not self.client:
@@ -154,15 +187,11 @@ class PubSubManager(threading.Thread):
             try:
                 message = self.pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message:
-                    channel = message['channel']
-                    data = message['data']
-                    # Try to parse JSON
-                    try:
-                        data = json.loads(data)
-                    except json.JSONDecodeError:
-                        pass
-                    
-                    self.callback(channel, data)
+                    channel = message["channel"]
+                    payload = RedisClient().parse_pubsub_message(message)
+                    if payload is None:
+                        payload = message.get("data")
+                    self.callback(channel, payload)
             except Exception as e:
                 logger.error(f"PubSub error: {e}")
                 if self._stop_event.is_set():

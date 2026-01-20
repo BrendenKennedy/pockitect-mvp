@@ -5,11 +5,24 @@ Displays a real-time view of all AWS resources across regions.
 """
 
 import uuid
+import html
 from typing import List, Dict, Optional
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QTreeWidget, QTreeWidgetItem, QProgressBar, QLabel,
-    QHeaderView, QMessageBox, QSplitter, QTextEdit
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QProgressBar,
+    QLabel,
+    QMessageBox,
+    QSplitter,
+    QScrollArea,
+    QFrame,
+    QGridLayout,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QHeaderView,
+    QCheckBox,
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QBrush
@@ -17,7 +30,127 @@ from PySide6.QtGui import QColor, QBrush
 from app.core.aws.scanner import ScannedResource
 from app.core.redis_client import RedisClient
 from monitor_service import ResourceMonitoringService
+from storage import get_preference
+from styles import ThemeManager
 
+
+def _get_theme_colors() -> Dict[str, str]:
+    theme_name = get_preference("theme", "modern_dark")
+    return ThemeManager.get_colors(theme_name)
+
+
+class _DashboardCard(QFrame):
+    def __init__(self, colors: Dict[str, str], parent=None):
+        super().__init__(parent)
+        self.setObjectName("dashboardCard")
+        self.setStyleSheet(
+            f"""
+            QFrame#dashboardCard {{
+                background-color: {colors['bg_secondary']};
+                border: 1px solid {colors['border_secondary']};
+                border-radius: 12px;
+            }}
+            """
+        )
+
+
+class SummaryCard(_DashboardCard):
+    def __init__(self, title: str, value: str, colors: Dict[str, str], parent=None):
+        super().__init__(colors, parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(6)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; font-size: 12px;"
+        )
+        value_label = QLabel(value)
+        value_label.setStyleSheet(
+            f"color: {colors['text_primary']}; font-size: 20px; font-weight: bold;"
+        )
+
+        layout.addWidget(title_label)
+        layout.addWidget(value_label)
+
+
+class ResourceTypeCard(_DashboardCard):
+    def __init__(self, resource_type: str, total: int, breakdown: Dict[str, int], colors: Dict[str, str], parent=None):
+        super().__init__(colors, parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(6)
+
+        title_label = QLabel(resource_type)
+        title_label.setStyleSheet(
+            f"color: {colors['text_primary']}; font-size: 14px; font-weight: bold;"
+        )
+        total_label = QLabel(f"Total: {total}")
+        total_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; font-size: 12px;"
+        )
+
+        breakdown_label = QLabel(", ".join(f"{k}: {v}" for k, v in breakdown.items()) or "No data")
+        breakdown_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; font-size: 11px;"
+        )
+        breakdown_label.setWordWrap(True)
+
+        layout.addWidget(title_label)
+        layout.addWidget(total_label)
+        layout.addWidget(breakdown_label)
+
+
+class RegionCard(_DashboardCard):
+    def __init__(self, region: str, total: int, breakdown: Dict[str, int], colors: Dict[str, str], parent=None):
+        super().__init__(colors, parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(6)
+
+        title_label = QLabel(region)
+        title_label.setStyleSheet(
+            f"color: {colors['text_primary']}; font-size: 14px; font-weight: bold;"
+        )
+        total_label = QLabel(f"Resources: {total}")
+        total_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; font-size: 12px;"
+        )
+
+        breakdown_items = sorted(breakdown.items(), key=lambda item: item[1], reverse=True)[:4]
+        breakdown_label = QLabel(", ".join(f"{k}: {v}" for k, v in breakdown_items) or "No data")
+        breakdown_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; font-size: 11px;"
+        )
+        breakdown_label.setWordWrap(True)
+
+        layout.addWidget(title_label)
+        layout.addWidget(total_label)
+        layout.addWidget(breakdown_label)
+
+
+class TextCard(_DashboardCard):
+    def __init__(self, title: str, colors: Dict[str, str], parent=None):
+        super().__init__(colors, parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(6)
+
+        self._title_label = QLabel(title)
+        self._title_label.setStyleSheet(
+            f"color: {colors['text_secondary']}; font-size: 13px; font-weight: bold;"
+        )
+        self._body_label = QLabel("No data")
+        self._body_label.setStyleSheet(
+            f"color: {colors['text_primary']}; font-size: 12px;"
+        )
+        self._body_label.setWordWrap(True)
+
+        layout.addWidget(self._title_label)
+        layout.addWidget(self._body_label)
+
+    def set_body(self, html_text: str) -> None:
+        self._body_label.setText(html_text)
 class ResourceMonitorWidget(QWidget):
     """Main widget for the Monitor tab."""
     
@@ -27,13 +160,15 @@ class ResourceMonitorWidget(QWidget):
     def __init__(self, monitor_service: ResourceMonitoringService, parent=None):
         super().__init__(parent)
         self.monitor_service = monitor_service
+        self._colors = _get_theme_colors()
         self._setup_ui()
         self.resources: List[ScannedResource] = []
         self.redis = RedisClient()
         self._delete_request_id = None
         self._delete_errors: List[str] = []
         self._delete_success_ids: List[str] = []
-        self.pending_delete_items: List[QTreeWidgetItem] = []
+        self.pending_delete_resources: List[ScannedResource] = []
+        self._show_service_roles = False
         
         # Connect service signals
         self.monitor_service.scan_completed.connect(self._on_scan_finished)
@@ -53,35 +188,20 @@ class ResourceMonitorWidget(QWidget):
         
         self.scan_btn = QPushButton("Scan Project Regions")
         self.scan_btn.clicked.connect(self.start_scan)
-        self.scan_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2c3e50;
-                color: white;
-                padding: 4px 12px;
-                border-radius: 4px;
-                font-weight: bold;
-                min-height: 24px;
-            }
-            QPushButton:hover { background-color: #34495e; }
-        """)
+        # Styling handled by global theme
         top_bar.addWidget(self.scan_btn)
 
         self.delete_btn = QPushButton("Delete Selected")
         self.delete_btn.clicked.connect(self.delete_selected)
-        self.delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #c0392b; 
-                color: white;
-                padding: 4px 12px;
-                border-radius: 4px;
-                font-weight: bold;
-                min-height: 24px;
-            }
-            QPushButton:hover { background-color: #e74c3c; }
-            QPushButton:disabled { background-color: #95a5a6; }
-        """)
+        self.delete_btn.setProperty("danger", "true")  # Use danger button style from theme
+        # Styling handled by global theme
         self.delete_btn.setEnabled(False) # Default disabled
         top_bar.addWidget(self.delete_btn)
+
+        self.show_roles_checkbox = QCheckBox("Show AWS Service Roles")
+        self.show_roles_checkbox.setChecked(False)
+        self.show_roles_checkbox.stateChanged.connect(self._on_service_role_toggle)
+        top_bar.addWidget(self.show_roles_checkbox)
         
         self.status_label = QLabel("Ready")
         self.status_label.setMinimumWidth(150)
@@ -100,8 +220,8 @@ class ResourceMonitorWidget(QWidget):
         
         # --- Main Content (Splitter) ---
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        
-        # Left: Resource Tree
+
+        # Left: Resource tree list
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Region / Type / Resource", "ID", "State", "Name"])
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -109,17 +229,58 @@ class ResourceMonitorWidget(QWidget):
         self.tree.header().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
         self.tree.itemClicked.connect(self._on_item_clicked)
-        # Handle selection change for button state
         self.tree.itemSelectionChanged.connect(self._on_selection_changed)
         splitter.addWidget(self.tree)
-        
-        # Right: Details View
-        self.details_text = QTextEdit()
-        self.details_text.setReadOnly(True)
-        self.details_text.setPlaceholderText("Select a resource to view details...")
-        splitter.addWidget(self.details_text)
-        
-        # Set splitter ratio (70% tree, 30% details)
+
+        # Right: Cards panel
+        self.cards_scroll = QScrollArea()
+        self.cards_scroll.setWidgetResizable(True)
+        self.cards_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.cards_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.cards_scroll.setMinimumWidth(300)  # Ensure cards panel has minimum width
+        self.cards_scroll.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+
+        self.cards_container = QWidget()
+        self.cards_layout = QVBoxLayout(self.cards_container)
+        self.cards_layout.setContentsMargins(8, 8, 8, 8)
+        self.cards_layout.setSpacing(12)
+
+        self.selected_card = TextCard("Selected Resource", self._colors)
+        self.details_card = TextCard("Details", self._colors)
+        self.tags_card = TextCard("Tags", self._colors)
+        self.cards_layout.addWidget(self.selected_card)
+        self.cards_layout.addWidget(self.details_card)
+        self.cards_layout.addWidget(self.tags_card)
+
+        # Summary section
+        self.summary_section = QWidget()
+        self.summary_layout = QGridLayout(self.summary_section)
+        self.summary_layout.setContentsMargins(0, 0, 0, 0)
+        self.summary_layout.setHorizontalSpacing(12)
+        self.summary_layout.setVerticalSpacing(12)
+        self.cards_layout.addWidget(self.summary_section)
+
+        # Resource type section
+        self.type_section = QWidget()
+        self.type_layout = QGridLayout(self.type_section)
+        self.type_layout.setContentsMargins(0, 0, 0, 0)
+        self.type_layout.setHorizontalSpacing(12)
+        self.type_layout.setVerticalSpacing(12)
+        self.cards_layout.addWidget(self.type_section)
+
+        # Region section
+        self.region_section = QWidget()
+        self.region_layout = QGridLayout(self.region_section)
+        self.region_layout.setContentsMargins(0, 0, 0, 0)
+        self.region_layout.setHorizontalSpacing(12)
+        self.region_layout.setVerticalSpacing(12)
+        self.cards_layout.addWidget(self.region_section)
+
+        self.cards_layout.addStretch()
+        self.cards_scroll.setWidget(self.cards_container)
+        splitter.addWidget(self.cards_scroll)
+
+        # Set splitter ratio (70% list, 30% cards)
         splitter.setStretchFactor(0, 7)
         splitter.setStretchFactor(1, 3)
         
@@ -131,7 +292,7 @@ class ResourceMonitorWidget(QWidget):
         self.progress_bar.setVisible(True)
         self.status_label.setText("Starting scan...")
         self.tree.clear()
-        self.details_text.clear()
+        self._clear_detail_cards()
         
         # Request full scan
         self.monitor_service.request_scan(regions=None)
@@ -141,8 +302,7 @@ class ResourceMonitorWidget(QWidget):
         
     def _on_scan_finished(self, resources: List[ScannedResource]):
         self.resources = resources
-        self.tree.clear()
-        self._populate_tree(resources)
+        self._refresh_dashboard()
         
         self.scan_btn.setEnabled(True)
         self.progress_bar.setVisible(False)
@@ -159,103 +319,190 @@ class ResourceMonitorWidget(QWidget):
         self.status_label.setText("Scan failed")
         QMessageBox.critical(self, "Scan Error", f"An error occurred:\n{error_msg}")
 
-    def _populate_tree(self, resources: List[ScannedResource]):
-        """Group resources by Region -> Type and populate the tree."""
-        # Group data
+    def _refresh_dashboard(self):
+        resources = self._filtered_resources()
+        self._populate_tree(resources)
+        self._populate_summary_cards(resources)
+        self._populate_type_cards(resources)
+        self._populate_region_cards(resources)
+        if not self._get_selected_resources():
+            self._clear_detail_cards()
+
+    def _populate_summary_cards(self, resources: List[ScannedResource]) -> None:
+        self._clear_layout(self.summary_layout)
+
+        total = len(resources)
+        by_type = {}
         by_region = {}
-        for r in resources:
-            if r.region not in by_region:
-                by_region[r.region] = {}
-            
-            if r.type not in by_region[r.region]:
-                by_region[r.region][r.type] = []
-                
-            by_region[r.region][r.type].append(r)
-            
-        # Build tree
+        for res in resources:
+            by_type[res.type] = by_type.get(res.type, 0) + 1
+            by_region[res.region] = by_region.get(res.region, 0) + 1
+
+        cards = [
+            SummaryCard("Total Resources", str(total), self._colors),
+            SummaryCard("Resource Types", str(len(by_type)), self._colors),
+            SummaryCard("Regions", str(len(by_region)), self._colors),
+        ]
+
+        for idx, card in enumerate(cards):
+            self.summary_layout.addWidget(card, 0, idx)
+
+    def _populate_type_cards(self, resources: List[ScannedResource]) -> None:
+        self._clear_layout(self.type_layout)
+
+        by_type: Dict[str, List[ScannedResource]] = {}
+        for res in resources:
+            by_type.setdefault(res.type, []).append(res)
+
+        row = 0
+        col = 0
+        for resource_type in sorted(by_type.keys()):
+            items = by_type[resource_type]
+            breakdown = {}
+            for res in items:
+                state = res.state or "unknown"
+                breakdown[state] = breakdown.get(state, 0) + 1
+            card = ResourceTypeCard(resource_type, len(items), breakdown, self._colors)
+            self.type_layout.addWidget(card, row, col)
+            col += 1
+            if col >= 3:
+                row += 1
+                col = 0
+
+    def _populate_region_cards(self, resources: List[ScannedResource]) -> None:
+        self._clear_layout(self.region_layout)
+
+        by_region: Dict[str, List[ScannedResource]] = {}
+        for res in resources:
+            by_region.setdefault(res.region, []).append(res)
+
+        row = 0
+        col = 0
+        for region in sorted(by_region.keys()):
+            items = by_region[region]
+            breakdown = {}
+            for res in items:
+                breakdown[res.type] = breakdown.get(res.type, 0) + 1
+            card = RegionCard(region, len(items), breakdown, self._colors)
+            self.region_layout.addWidget(card, row, col)
+            col += 1
+            if col >= 3:
+                row += 1
+                col = 0
+
+    def _populate_tree(self, resources: List[ScannedResource]) -> None:
+        self.tree.clear()
+        by_region: Dict[str, Dict[str, List[ScannedResource]]] = {}
+        for res in resources:
+            by_region.setdefault(res.region, {}).setdefault(res.type, []).append(res)
+
         for region in sorted(by_region.keys()):
             region_item = QTreeWidgetItem(self.tree)
             region_item.setText(0, region)
             region_item.setExpanded(True)
-            
-            # Region icon/color
-            region_item.setForeground(0, QBrush(QColor("#3498db"))) # Blue
-            
+            region_item.setForeground(0, QBrush(QColor(self._colors["status_info"])))
+
             types_in_region = by_region[region]
             for r_type in sorted(types_in_region.keys()):
                 type_item = QTreeWidgetItem(region_item)
                 type_item.setText(0, r_type)
                 type_item.setExpanded(True)
-                
+
                 for res in types_in_region[r_type]:
                     item = QTreeWidgetItem(type_item)
-                    
-                    # Columns: Name/ID combo, ID, State, Name
                     display_name = res.name or res.id
                     item.setText(0, display_name)
                     item.setText(1, res.id)
-                    item.setText(2, res.state)
+                    item.setText(2, res.state or "-")
                     item.setText(3, res.name or "-")
-                    
-                    # Color code state
+
                     if res.state in ['running', 'available', 'active', 'associated']:
-                        item.setForeground(2, QBrush(QColor("#2ecc71"))) # Green
+                        item.setForeground(2, QBrush(QColor(self._colors["status_ok"])))
                     elif res.state in ['stopped', 'terminated']:
-                        item.setForeground(2, QBrush(QColor("#e74c3c"))) # Red
+                        item.setForeground(2, QBrush(QColor(self._colors["status_error"])))
                     else:
-                        item.setForeground(2, QBrush(QColor("#f1c40f"))) # Yellow
-                        
-                    # Store reference to full object
+                        item.setForeground(2, QBrush(QColor(self._colors["status_warning"])))
+
                     item.setData(0, Qt.ItemDataRole.UserRole, res)
 
-    def _on_selection_changed(self):
-        """Update delete button based on selection."""
-        items = self.tree.selectedItems()
-        has_resources = False
-        for item in items:
-            if isinstance(item.data(0, Qt.ItemDataRole.UserRole), ScannedResource):
-                has_resources = True
-                break
-        self.delete_btn.setEnabled(has_resources)
+    def _on_selection_changed(self) -> None:
+        selected_resources = self._get_selected_resources()
+        self.delete_btn.setEnabled(bool(selected_resources))
+        if len(selected_resources) == 1:
+            self._render_details(selected_resources[0])
+        else:
+            self._clear_detail_cards()
 
-    def _on_item_clicked(self, item: QTreeWidgetItem, column: int):
-        """Show details when a resource is clicked."""
-        # Note: _on_selection_changed handles the button enablement now,
-        # but we still need to show details for the *clicked* (last) item.
-        
+    def _on_item_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         resource = item.data(0, Qt.ItemDataRole.UserRole)
         if isinstance(resource, ScannedResource):
-            # ... details logic ...
-            details = f"Type: {resource.type}\n"
-            details += f"ID: {resource.id}\n"
-            details += f"Region: {resource.region}\n"
-            details += f"Name: {resource.name}\n"
-            details += f"State: {resource.state}\n\n"
-            
-            details += "--- Details ---\n"
-            for k, v in resource.details.items():
-                details += f"{k}: {v}\n"
-                
-            details += "\n--- Tags ---\n"
-            for k, v in resource.tags.items():
-                details += f"{k}: {v}\n"
-                
-            self.details_text.setText(details)
-        else:
-            self.details_text.clear()
+            self._render_details(resource)
+
+    def _render_details(self, resource: ScannedResource) -> None:
+        details = dict(resource.details or {})
+        arn = details.pop("arn", None)
+        overview_lines = [
+            f"<b>Type:</b> {html.escape(resource.type)}",
+            f"<b>ID:</b> {html.escape(resource.id)}",
+            f"<b>Region:</b> {html.escape(resource.region)}",
+            f"<b>Name:</b> {html.escape(resource.name or '-')}",
+            f"<b>State:</b> {html.escape(resource.state or '-')}",
+        ]
+        if arn:
+            overview_lines.append(f"<b>ARN:</b> {html.escape(str(arn))}")
+        self.selected_card.set_body("<br>".join(overview_lines))
+
+        detail_rows = "<br>".join(
+            f"<b>{html.escape(str(k))}:</b> {html.escape(str(v))}"
+            for k, v in details.items()
+        )
+        self.details_card.set_body(detail_rows or "None")
+
+        tag_rows = "<br>".join(
+            f"<b>{html.escape(str(k))}:</b> {html.escape(str(v))}"
+            for k, v in (resource.tags or {}).items()
+        )
+        self.tags_card.set_body(tag_rows or "None")
+
+    def _clear_detail_cards(self) -> None:
+        self.selected_card.set_body("Select a single resource to view details.")
+        self.details_card.set_body("None")
+        self.tags_card.set_body("None")
+
+    def _get_selected_resources(self) -> List[ScannedResource]:
+        selected = []
+        for item in self.tree.selectedItems():
+            res = item.data(0, Qt.ItemDataRole.UserRole)
+            if isinstance(res, ScannedResource):
+                selected.append(res)
+        return selected
+
+    def _clear_layout(self, layout: QGridLayout) -> None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+    def _is_service_role(self, resource: ScannedResource) -> bool:
+        if resource.type != "iam_role":
+            return False
+        role_name = resource.id or ""
+        arn = (resource.details or {}).get("arn", "")
+        return role_name.startswith("AWSServiceRoleFor") or "/aws-service-role/" in arn
+
+    def _filtered_resources(self) -> List[ScannedResource]:
+        if self._show_service_roles:
+            return self.resources
+        return [res for res in self.resources if not self._is_service_role(res)]
+
+    def _on_service_role_toggle(self) -> None:
+        self._show_service_roles = self.show_roles_checkbox.isChecked()
+        self._refresh_dashboard()
 
     def delete_selected(self):
         """Delete the selected resources."""
-        items = self.tree.selectedItems()
-        if not items:
-            return
-            
-        resources_to_delete = []
-        for item in items:
-            res = item.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(res, ScannedResource):
-                resources_to_delete.append(res)
-        
+        resources_to_delete = self._get_selected_resources()
         if not resources_to_delete:
             return
 
@@ -283,7 +530,7 @@ class ResourceMonitorWidget(QWidget):
             self.delete_btn.setEnabled(False)
             self.tree.setEnabled(False)
             
-            self.pending_delete_items = items
+            self.pending_delete_resources = resources_to_delete
             self._delete_request_id = uuid.uuid4().hex
             self._delete_errors = []
             self._delete_success_ids = []
@@ -358,16 +605,12 @@ class ResourceMonitorWidget(QWidget):
         self.tree.setEnabled(True)
 
         if self._delete_success_ids:
-            items_to_remove = []
-            for item in self.pending_delete_items:
-                res = item.data(0, Qt.ItemDataRole.UserRole)
-                if isinstance(res, ScannedResource) and res.id in self._delete_success_ids:
-                    items_to_remove.append(item)
-
-            for item in items_to_remove:
-                parent = item.parent()
-                if parent:
-                    parent.removeChild(item)
+            remaining = [
+                res for res in self.resources
+                if res.id not in self._delete_success_ids
+            ]
+            self.resources = remaining
+            self._refresh_dashboard()
 
         if not self._delete_errors:
             self.status_label.setText("Deletion complete.")
@@ -380,7 +623,7 @@ class ResourceMonitorWidget(QWidget):
             QMessageBox.warning(self, "Partial Success", 
                 f"Deleted {len(self._delete_success_ids)} resources.\n\nErrors:\n{error_msg}")
 
-        self.pending_delete_items = []
+        self.pending_delete_resources = []
         self._delete_request_id = None
     
     def get_resources_by_project(self, project_name: str) -> List[ScannedResource]:
